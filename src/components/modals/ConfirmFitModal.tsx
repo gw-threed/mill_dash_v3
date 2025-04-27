@@ -27,11 +27,12 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
   const [gcodeConfirmed, setGcodeConfirmed] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summaryItems, setSummaryItems] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { mills } = useMillContext();
+  const { mills, occupyMillSlot, clearMillSlot } = useMillContext();
   const { movePuck, updatePuckScreenshot, pucks, updatePuckStatus } = usePuckContext();
   const { removeCases, addCases } = useCaseContext();
-  const { findFirstAvailableSlot } = useStorageContext();
+  const { findFirstAvailableSlot, clearSlot, occupySlot } = useStorageContext();
 
   const selectedPuck = pucks.find((p) => p.puckId === puckId);
   const selectedPuckLoc = selectedPuck?.currentLocation || '';
@@ -84,28 +85,56 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
 
   const isLast = currentStep === 4;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedMillId || !selectedSlot || !screenshot) return;
-    // update puck
-    movePuck(puckId, `${selectedMillId}/${selectedSlot}`);
-    updatePuckScreenshot(puckId, screenshot);
-    updatePuckStatus(puckId, 'in_mill');
-    // complete cases
-    removeCases(caseIds);
-    // add mock new cases to keep 45 (simple demo: generate 5 new)
-    const seed = generateSeedData();
-    addCases(seed.cases.slice(0, caseIds.length));
-    const items: string[] = [
-      `Selected Puck ${puckId} moved to ${selectedMillId} Slot ${selectedSlot}`,
-      `Selected Cases ${caseIds.join(', ')} removed from queue and ${caseIds.length} new cases generated`,
-    ];
-    if (occupiedInfo.occupiedPuckId && vacantSlotLoc) {
-      items.unshift(
-        `Old Puck ${occupiedInfo.occupiedPuckId} relocated to Storage Slot ${vacantSlotLoc}`,
-      );
+    setIsSubmitting(true);
+    try {
+      /* 1. Clear previous location (storage or mill) */
+      if (selectedPuckLoc) {
+        if (selectedPuckLoc.includes('/')) {
+          const [oldMillId, oldSlotName] = selectedPuckLoc.split('/');
+          clearMillSlot(oldMillId, oldSlotName);
+        } else {
+          clearSlot(selectedPuckLoc);
+        }
+      }
+
+      /* 2. Update puck core fields */
+      movePuck(puckId, `${selectedMillId}/${selectedSlot}`);
+      updatePuckScreenshot(puckId, screenshot);
+      updatePuckStatus(puckId, 'in_mill');
+
+      /* 3. Occupy new mill slot */
+      occupyMillSlot(selectedMillId, selectedSlot, puckId);
+
+      /* 4. Handle displaced puck, if any */
+      if (occupiedInfo.occupiedPuckId && vacantSlotLoc) {
+        movePuck(occupiedInfo.occupiedPuckId, vacantSlotLoc);
+        updatePuckStatus(occupiedInfo.occupiedPuckId, 'in_storage');
+        clearSlot(vacantSlotLoc);
+        occupySlot(vacantSlotLoc, occupiedInfo.occupiedPuckId);
+      }
+
+      /* 5. Case queue maintenance */
+      removeCases(caseIds);
+      const seed = generateSeedData();
+      addCases(seed.cases.slice(0, caseIds.length));
+
+      /* 6. Build summary */
+      const items: string[] = [
+        `Selected Puck ${puckId} moved to ${selectedMillId} Slot ${selectedSlot}`,
+        `Selected Cases ${caseIds.join(', ')} removed from queue and ${caseIds.length} new cases generated`,
+      ];
+      if (occupiedInfo.occupiedPuckId && vacantSlotLoc) {
+        items.unshift(
+          `Old Puck ${occupiedInfo.occupiedPuckId} relocated to Storage Slot ${vacantSlotLoc}`,
+        );
+      }
+      setSummaryItems(items);
+      setShowSummary(true);
+    } finally {
+      setIsSubmitting(false);
     }
-    setSummaryItems(items);
-    setShowSummary(true);
   };
 
   return (
@@ -184,13 +213,41 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
               </button>
             )}
             <button
-              disabled={!canNext || showSummary}
+              disabled={!canNext || showSummary || isSubmitting}
               onClick={isLast ? handleSubmit : nextStep}
-              className={`px-4 py-2 rounded text-sm font-medium transition ${
+              className={`px-4 py-2 rounded text-sm font-medium transition flex items-center justify-center min-w-[180px] ${
                 isLast ? 'bg-green-600 hover:bg-green-500' : 'bg-[#BB86FC] hover:brightness-110'
               }`}
             >
-              {isLast ? 'Submit Milling Assignment' : 'Next'}
+              {isSubmitting ? (
+                <>
+                  <svg
+                    className="animate-spin h-4 w-4 mr-2"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8"
+                    />
+                  </svg>
+                  Submitting…
+                </>
+              ) : isLast ? (
+                'Submit Milling Assignment'
+              ) : (
+                'Next'
+              )}
             </button>
           </div>
         </div>

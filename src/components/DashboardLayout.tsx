@@ -4,12 +4,14 @@ import CaseList from './cases/CaseList';
 import PuckList from './pucks/PuckList';
 import ConfirmFitModal from './modals/ConfirmFitModal';
 import ViewStorageModal from './modals/ViewStorageModal';
+import ViewMillSlotsModal from './modals/ViewMillSlotsModal';
 
 const DashboardLayout: React.FC = () => {
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
   const [selectedPuckId, setSelectedPuckId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showStorage, setShowStorage] = useState(false);
+  const [showMillSlots, setShowMillSlots] = useState(false);
 
   const canProceed = selectedCaseIds.length > 0 && !!selectedPuckId;
 
@@ -28,6 +30,7 @@ const DashboardLayout: React.FC = () => {
           Reset
         </button>
         <button onClick={() => setShowStorage(true)} className="px-3 py-1 rounded bg-gray-600 text-white text-xs ml-2">View Storage</button>
+        <button onClick={() => setShowMillSlots(true)} className="px-3 py-1 rounded bg-gray-600 text-white text-xs ml-2">View Mill Slots</button>
       </div>
 
       {/* Main content */}
@@ -65,6 +68,8 @@ const DashboardLayout: React.FC = () => {
       )}
 
       {showStorage && <ViewStorageModal onClose={() => setShowStorage(false)} />}
+
+      {showMillSlots && <ViewMillSlotsModal onClose={() => setShowMillSlots(false)} />}
     </div>
   );
 };

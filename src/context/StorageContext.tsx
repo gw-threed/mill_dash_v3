@@ -21,15 +21,13 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
   );
 
   const occupySlot = (fullLocation: string, puckId: string) =>
-    setStorageSlots(
-      storageSlots.map((s) =>
-        s.fullLocation === fullLocation ? { ...s, occupied: true, puckId } : s,
-      ),
+    setStorageSlots((prev) =>
+      prev.map((s) => (s.fullLocation === fullLocation ? { ...s, occupied: true, puckId } : s)),
     );
 
   const clearSlot = (fullLocation: string) =>
-    setStorageSlots(
-      storageSlots.map((s) =>
+    setStorageSlots((prev) =>
+      prev.map((s) =>
         s.fullLocation === fullLocation ? { ...s, occupied: false, puckId: null } : s,
       ),
     );

@@ -17,8 +17,8 @@ export const MillProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [mills, setMills] = useLocalStorage<Mill[]>('mills', seed.mills);
 
   const occupyMillSlot = (millName: string, slotName: string, puckId: string) =>
-    setMills(
-      mills.map((m) =>
+    setMills((prev) =>
+      prev.map((m) =>
         m.id === millName
           ? {
               ...m,
@@ -31,8 +31,8 @@ export const MillProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
   const clearMillSlot = (millName: string, slotName: string) =>
-    setMills(
-      mills.map((m) =>
+    setMills((prev) =>
+      prev.map((m) =>
         m.id === millName
           ? {
               ...m,

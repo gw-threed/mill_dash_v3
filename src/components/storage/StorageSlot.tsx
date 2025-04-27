@@ -4,7 +4,7 @@ import { StorageSlot as Slot, Puck } from '../../types';
 interface Props {
   slot: Slot;
   puck?: Puck;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 const shadeColor = (shade?: string) => {
@@ -17,12 +17,16 @@ const shadeColor = (shade?: string) => {
 
 const StorageSlot: React.FC<Props> = ({ slot, puck, onClick }) => {
   const occupied = slot.occupied && puck;
+  const tooltipBase = `Shelf ${slot.shelf}, Column ${slot.column}, Slot ${slot.slotNumber}`;
+  const tooltip = occupied ? `${tooltipBase} - ${puck?.shade} ${puck?.thickness}` : `${tooltipBase} (Empty)`;
+
   return (
     <div
       onClick={occupied ? onClick : undefined}
-      className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-[10px] md:text-xs cursor-pointer rounded-sm border ${
-        occupied ? shadeColor(puck?.shade) : 'border-gray-700'
-      } ${occupied ? 'hover:brightness-125' : ''}`}
+      className={`w-12 h-12 flex items-center justify-center text-[10px] md:text-xs rounded-sm border ${
+        occupied ? shadeColor(puck?.shade) : 'border-[#2D2D2D] bg-[#1A1A1A] text-gray-600'
+      } ${occupied ? 'hover:brightness-125 cursor-pointer' : ''}`}
+      title={tooltip}
     >
       {slot.slotNumber}
     </div>

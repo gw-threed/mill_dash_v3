@@ -20,24 +20,20 @@ export const PuckProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [pucks, setPucks] = useLocalStorage<Puck[]>('pucks', seed.pucks);
 
   const movePuck = (puckId: string, newLocation: string) =>
-    setPucks(
-      pucks.map((p) => (p.puckId === puckId ? { ...p, currentLocation: newLocation } : p)),
+    setPucks((prev) =>
+      prev.map((p) => (p.puckId === puckId ? { ...p, currentLocation: newLocation } : p)),
     );
 
   const updatePuckScreenshot = (puckId: string, screenshotUrl: string) =>
-    setPucks(
-      pucks.map((p) => (p.puckId === puckId ? { ...p, screenshotUrl } : p)),
-    );
+    setPucks((prev) => prev.map((p) => (p.puckId === puckId ? { ...p, screenshotUrl } : p)));
 
   const retirePuck = (puckId: string) =>
-    setPucks(
-      pucks.map((p) => (p.puckId === puckId ? { ...p, status: 'retired' } : p)),
-    );
+    setPucks((prev) => prev.map((p) => (p.puckId === puckId ? { ...p, status: 'retired' } : p)));
 
   const updatePuckStatus = (
     puckId: string,
     status: 'in_storage' | 'in_mill' | 'retired',
-  ) => setPucks(pucks.map((p) => (p.puckId === puckId ? { ...p, status } : p)));
+  ) => setPucks((prev) => prev.map((p) => (p.puckId === puckId ? { ...p, status } : p)));
 
   const resetPucks = () => setPucks(seed.pucks);
 
