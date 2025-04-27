@@ -21,9 +21,9 @@ export const CaseProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [cases, setCases] = useLocalStorage<CamCase[]>('cases', seed.cases);
   const [selectedShade, setSelectedShade] = React.useState<string | null>(null);
 
-  const addCase = (newCase: CamCase) => setCases([...cases, newCase]);
-  const addCases = (newCases: CamCase[]) => setCases([...cases, ...newCases]);
-  const removeCases = (ids: string[]) => setCases(cases.filter((c) => !ids.includes(c.caseId)));
+  const addCase = (newCase: CamCase) => setCases((prev) => [...prev, newCase]);
+  const addCases = (newCases: CamCase[]) => setCases((prev) => [...prev, ...newCases]);
+  const removeCases = (ids: string[]) => setCases((prev) => prev.filter((c) => !ids.includes(c.caseId)));
   const resetCases = () => setCases(seed.cases);
 
   const value: CaseContextValue = { cases, setCases, addCase, addCases, removeCases, resetCases, selectedShade, setSelectedShade };
