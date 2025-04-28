@@ -48,8 +48,6 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
     return { occupiedPuckId: undefined, occupiedShade: undefined };
   })();
 
-  const vacantSlotLoc = findFirstAvailableSlot()?.fullLocation;
-
   const millValid = selectedMillId !== null;
   const slotValid = (() => {
     if (!millValid) return false;
@@ -58,6 +56,9 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
     if (mill.slots.length === 1) return true;
     return !!selectedSlot;
   })();
+
+  const newLocation = selectedMillId && selectedSlot ? `${selectedMillId}/${selectedSlot}` : '';
+  const displacementNeeded = occupiedInfo.occupiedPuckId && occupiedInfo.occupiedPuckId !== puckId;
 
   const canNext =
     currentStep === 1
@@ -70,7 +71,11 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
 
   const nextStep = () => {
     if (currentStep === 1) {
-      setShowRelocation(true);
+      if (occupiedInfo.occupiedPuckId && occupiedInfo.occupiedPuckId !== puckId) {
+        setShowRelocation(true);
+      } else {
+        setCurrentStep(2);
+      }
     } else {
       setCurrentStep((s) => Math.min(4, s + 1));
     }
@@ -89,30 +94,35 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
     if (!selectedMillId || !selectedSlot || !screenshot) return;
     setIsSubmitting(true);
     try {
-      /* 1. Clear previous location (storage or mill) */
-      if (selectedPuckLoc) {
-        if (selectedPuckLoc.includes('/')) {
-          const [oldMillId, oldSlotName] = selectedPuckLoc.split('/');
-          clearMillSlot(oldMillId, oldSlotName);
-        } else {
-          clearSlot(selectedPuckLoc);
+      /* 1. If puck changing location, clear previous location & update */
+      if (selectedPuckLoc !== newLocation) {
+        if (selectedPuckLoc) {
+          if (selectedPuckLoc.includes('/')) {
+            const [oldMillId, oldSlotName] = selectedPuckLoc.split('/');
+            clearMillSlot(oldMillId, oldSlotName);
+          } else {
+            clearSlot(selectedPuckLoc);
+          }
         }
+        movePuck(puckId, newLocation);
+        updatePuckStatus(puckId, 'in_mill');
       }
 
-      /* 2. Update puck core fields */
-      movePuck(puckId, `${selectedMillId}/${selectedSlot}`);
+      /* 2. Update screenshot always */
       updatePuckScreenshot(puckId, screenshot);
-      updatePuckStatus(puckId, 'in_mill');
 
-      /* 3. Occupy new mill slot */
+      /* 3. Ensure mill slot has correct puck */
       occupyMillSlot(selectedMillId, selectedSlot, puckId);
 
-      /* 4. Handle displaced puck, if any */
-      if (occupiedInfo.occupiedPuckId && vacantSlotLoc) {
-        movePuck(occupiedInfo.occupiedPuckId, vacantSlotLoc);
-        updatePuckStatus(occupiedInfo.occupiedPuckId, 'in_storage');
-        clearSlot(vacantSlotLoc);
-        occupySlot(vacantSlotLoc, occupiedInfo.occupiedPuckId);
+      /* 4. Handle displaced puck if different */
+      if (displacementNeeded) {
+        const vacant = findFirstAvailableSlot();
+        if (!vacant) throw new Error('No vacant storage slot available');
+        const vacantLoc = vacant.fullLocation;
+        movePuck(occupiedInfo.occupiedPuckId!, vacantLoc);
+        updatePuckStatus(occupiedInfo.occupiedPuckId!, 'in_storage');
+        // ensure slot reflects new occupant
+        occupySlot(vacantLoc, occupiedInfo.occupiedPuckId!);
       }
 
       /* 5. Case queue maintenance */
@@ -125,10 +135,8 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
         `Selected Puck ${puckId} moved to ${selectedMillId} Slot ${selectedSlot}`,
         `Selected Cases ${caseIds.join(', ')} removed from queue and ${caseIds.length} new cases generated`,
       ];
-      if (occupiedInfo.occupiedPuckId && vacantSlotLoc) {
-        items.unshift(
-          `Old Puck ${occupiedInfo.occupiedPuckId} relocated to Storage Slot ${vacantSlotLoc}`,
-        );
+      if (displacementNeeded) {
+        items.unshift(`Old Puck ${occupiedInfo.occupiedPuckId} relocated to Storage Rack`);
       }
       setSummaryItems(items);
       setShowSummary(true);
@@ -252,7 +260,7 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
           </div>
         </div>
       </div>
-      {showRelocation && selectedMillId && (
+      {showRelocation && displacementNeeded && selectedMillId && (
         <RelocationModal
           selectedPuckId={puckId}
           selectedPuckLoc={selectedPuckLoc}
@@ -260,7 +268,7 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
           slotName={selectedSlot || '1'}
           occupiedPuckId={occupiedInfo.occupiedPuckId}
           occupiedShade={occupiedInfo.occupiedShade}
-          vacantSlot={vacantSlotLoc}
+          vacantSlot={undefined}
           onConfirm={handleRelocationConfirm}
           onCancel={() => setShowRelocation(false)}
         />
