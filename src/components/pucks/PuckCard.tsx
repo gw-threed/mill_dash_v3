@@ -18,7 +18,7 @@ const PuckCard: React.FC<Props> = ({ puck, isSelected, onSelect }) => {
       onClick={() => onSelect(puck.puckId)}
       className={clsx(
         'relative cursor-pointer bg-[#1E1E1E] text-white rounded-md p-4 shadow transition transform hover:-translate-y-0.5 hover:shadow-lg flex flex-col',
-        isSelected ? 'border-2 border-[#BB86FC]' : 'border border-transparent',
+        isSelected ? 'ring-2 ring-cyan-400/70 shadow-[0_0_10px_#22D3EE]' : 'ring-0',
       )}
     >
       {/* Location Badge */}
@@ -32,20 +32,23 @@ const PuckCard: React.FC<Props> = ({ puck, isSelected, onSelect }) => {
       <img
         src={puck.screenshotUrl === '/puck_placeholder.png' ? placeholderImg : puck.screenshotUrl}
         alt="puck thumbnail"
-        className="w-full h-32 object-cover rounded-md shadow-md mb-3"
+        className="w-full aspect-square object-cover rounded-md shadow-md mb-3"
       />
 
-      {/* Shade & Thickness */}
-      <div className="text-center mb-3">
-        <div className="text-xl font-bold">{puck.shade}</div>
-        <div className="text-sm opacity-80">{puck.thickness}</div>
-      </div>
+      {/* Bottom info row */}
+      <div className="mt-auto flex justify-between items-end text-xs">
+        {/* Shade & thickness (left) */}
+        <div>
+          <div className="text-lg font-bold leading-none">{puck.shade}</div>
+          <div className="opacity-80">{puck.thickness}</div>
+        </div>
 
-      {/* Meta */}
-      <div className="text-xs opacity-80 space-y-1 mt-auto">
-        <div>Shrink: {puck.shrinkageFactor.toFixed(4)}</div>
-        <div>Lot: {puck.lotNumber}</div>
-        <div>Serial: {puck.serialNumber}</div>
+        {/* Meta (right) */}
+        <div className="text-right opacity-80 space-y-0.5">
+          <div>Shr: {puck.shrinkageFactor.toFixed(2)}</div>
+          <div>Lot: {puck.lotNumber}</div>
+          <div>Ser: {puck.serialNumber}</div>
+        </div>
       </div>
     </div>
   );

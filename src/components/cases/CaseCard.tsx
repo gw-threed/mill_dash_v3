@@ -15,7 +15,7 @@ const CaseCard: React.FC<Props> = ({ caseData, isSelected, onToggle, onCaseClick
       onClick={() => onCaseClick(caseData)}
       className={clsx(
         'relative bg-[#1E1E1E] text-white p-3 rounded-md flex flex-col shadow transition hover:-translate-y-0.5 hover:shadow-lg',
-        isSelected ? 'border-2 border-primary-light' : 'border border-transparent',
+        isSelected ? 'ring-2 ring-cyan-400/70 shadow-[0_0_10px_#22D3EE]' : 'ring-0',
       )}
     >
       <label
