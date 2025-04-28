@@ -27,21 +27,21 @@ const StorageGrid: React.FC<Props> = ({ onSlotClick }) => {
             <hr className="flex-1 ml-2 border-gray-600" />
           </div>
           {/* Column Letters */}
-          <div className="flex gap-1 ml-6">
+          <div className="flex gap-3">
             {columns.map((c) => (
-              <div key={c} className="w-12 text-center text-xs opacity-60">
+              <div key={c} className="w-24 text-center text-xs opacity-60">
                 {c}
               </div>
             ))}
           </div>
           {/* Columns with stacked slots */}
-          <div className="flex gap-1">
+          <div className="flex gap-3">
             {columns.map((col) => {
               const colSlots = storageSlots
                 .filter((s) => s.shelf === shelf && s.column === col)
                 .sort((a, b) => a.slotNumber - b.slotNumber);
               return (
-                <div key={col} className="flex flex-col-reverse gap-1">
+                <div key={col} className="flex flex-col-reverse gap-1 border border-gray-700 rounded-sm w-24 p-2">
                   {colSlots.map((slot) => {
                     const puck = slot.puckId ? puckMap[slot.puckId] : undefined;
                     return (

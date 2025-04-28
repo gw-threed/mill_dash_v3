@@ -23,7 +23,7 @@ const StorageSlot: React.FC<Props> = ({ slot, puck, onClick }) => {
   return (
     <div
       onClick={occupied ? onClick : undefined}
-      className={`w-12 h-12 flex items-center justify-center text-[10px] md:text-xs rounded-sm border ${
+      className={`h-5 w-20 flex items-center justify-center text-[10px] md:text-xs rounded-sm border ${
         occupied ? shadeColor(puck?.shade) : 'border-[#2D2D2D] bg-[#1A1A1A] text-gray-600'
       } ${occupied ? 'hover:brightness-125 cursor-pointer' : ''}`}
       title={tooltip}
