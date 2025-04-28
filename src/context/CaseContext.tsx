@@ -9,6 +9,7 @@ interface CaseContextValue {
   addCase: (newCase: CamCase) => void;
   addCases: (newCases: CamCase[]) => void;
   removeCases: (caseIds: string[]) => void;
+  removeStlFromCase: (caseId: string, filename: string) => void;
   resetCases: () => void;
   selectedShade: string | null;
   setSelectedShade: (shade: string | null) => void;
@@ -24,9 +25,31 @@ export const CaseProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addCase = (newCase: CamCase) => setCases((prev) => [...prev, newCase]);
   const addCases = (newCases: CamCase[]) => setCases((prev) => [...prev, ...newCases]);
   const removeCases = (ids: string[]) => setCases((prev) => prev.filter((c) => !ids.includes(c.caseId)));
+  const removeStlFromCase = (caseId: string, filename: string) =>
+    setCases((prev) =>
+      prev.map((c) =>
+        c.caseId === caseId
+          ? {
+              ...c,
+              stlFiles: c.stlFiles.filter((f) => f !== filename),
+              units: Math.max(0, c.units - 1),
+            }
+          : c,
+      ),
+    );
   const resetCases = () => setCases(seed.cases);
 
-  const value: CaseContextValue = { cases, setCases, addCase, addCases, removeCases, resetCases, selectedShade, setSelectedShade };
+  const value: CaseContextValue = {
+    cases,
+    setCases,
+    addCase,
+    addCases,
+    removeCases,
+    removeStlFromCase,
+    resetCases,
+    selectedShade,
+    setSelectedShade,
+  };
 
   return <CaseContext.Provider value={value}>{children}</CaseContext.Provider>;
 };

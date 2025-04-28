@@ -31,7 +31,7 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
 
   const { mills, occupyMillSlot, clearMillSlot } = useMillContext();
   const { movePuck, updatePuckScreenshot, pucks, updatePuckStatus } = usePuckContext();
-  const { removeCases, addCases } = useCaseContext();
+  const { removeCases, addCases, cases, removeStlFromCase } = useCaseContext();
   const { findFirstAvailableSlot, clearSlot, occupySlot } = useStorageContext();
 
   const selectedPuck = pucks.find((p) => p.puckId === puckId);
@@ -154,11 +154,36 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
           {/* Left - cases */}
           <div className="basis-1/2 bg-[#2D2D2D] rounded p-4 overflow-y-auto">
             <h4 className="font-semibold mb-2">Selected Cases ({caseIds.length})</h4>
-            <ul className="text-xs space-y-1 opacity-80">
-              {caseIds.map((id) => (
-                <li key={id}>{id}</li>
-              ))}
-            </ul>
+            <div className="space-y-3 text-xs opacity-80">
+              {caseIds.map((id) => {
+                const c = cases.find((cc) => cc.caseId === id);
+                if (!c) return null;
+                return (
+                  <div key={id}>
+                    <p className="text-sm font-semibold mb-1">{id}</p>
+                    <ul className="space-y-1">
+                      {c.stlFiles.map((f) => (
+                        <li key={f} className="flex justify-between items-center bg-surface-light px-2 py-1 rounded">
+                          <span className="truncate">{f}</span>
+                          <button
+                            onClick={() => removeStlFromCase(c.caseId, f)}
+                            className="text-textSecondary hover:text-primary transition"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                              <path
+                                fillRule="evenodd"
+                                d="M9 2.25A2.25 2.25 0 0011.25 0h1.5A2.25 2.25 0 0015 2.25V3h5.25a.75.75 0 010 1.5h-.708l-.772 13.805A3.75 3.75 0 0115.028 22.5H8.972a3.75 3.75 0 01-3.742-4.195L4.458 4.5H3.75a.75.75 0 010-1.5H9v-.75zm1.5.75v-.75a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v.75h-3z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           {/* Right - puck and step content placeholder */}
           <div className="basis-1/2 bg-[#2D2D2D] rounded p-4 overflow-y-auto flex flex-col">

@@ -27,6 +27,25 @@ export default {
         },
         tealAccent: '#14B8A6',
       },
+      keyframes: {
+        'fade-in-scale': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'fade-out-scale': {
+          '0%': { opacity: '1', transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'scale(0.95)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-100% 0' },
+          '100%': { backgroundPosition: '100% 0' },
+        },
+      },
+      animation: {
+        'modal-in': 'fade-in-scale 0.2s ease-out',
+        'modal-out': 'fade-out-scale 0.15s ease-in',
+        shimmer: 'shimmer 1.5s infinite linear',
+      },
     },
   },
   plugins: [],
