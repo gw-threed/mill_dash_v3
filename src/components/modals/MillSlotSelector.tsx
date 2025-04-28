@@ -90,11 +90,10 @@ const MillSlotSelector: React.FC<Props> = ({
                 <button
                   key={slot.slotName}
                   type="button"
-                  onClick={() => !occupied && setSelectedSlot(slot.slotName)}
-                  disabled={occupied}
+                  onClick={() => setSelectedSlot(slot.slotName)}
                   className={`px-3 py-1 rounded text-xs font-medium min-w-[60px] transition border border-gray-600 ${
                     occupied
-                      ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                      ? 'bg-gray-700 text-gray-300'
                       : 'bg-[#2D2D2D] hover:border-[#BB86FC]'
                   } ${isSelected ? 'ring-2 ring-[#BB86FC]' : ''}`}
                 >
