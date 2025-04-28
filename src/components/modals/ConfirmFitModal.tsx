@@ -6,17 +6,22 @@ import ScreenshotUploader from './ScreenshotUploader';
 import GcodeConfirmation from './GcodeConfirmation';
 import FinalSummary from './FinalSummary';
 import SubmissionSummary from './SubmissionSummary';
+import LastJobModal from './LastJobModal';
 import { useMillContext } from '../../context/MillContext';
 import { usePuckContext } from '../../context/PuckContext';
 import { useCaseContext } from '../../context/CaseContext';
 import { generateSeedData } from '../../data/seed';
 import { useStorageContext } from '../../context/StorageContext';
+import { useMillLogContext } from '../../context/MillLogContext';
 
 interface Props {
   caseIds: string[];
   puckId: string;
   onClose: () => void;
 }
+
+// Simple unique id generator for logs
+const generateLogId = () => `log-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
 const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -28,14 +33,17 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
   const [showSummary, setShowSummary] = useState(false);
   const [summaryItems, setSummaryItems] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastJobActive, setLastJobActive] = useState(false);
+  const [replacementPuckId, setReplacementPuckId] = useState<string | null>(null);
 
   // Keep track of stl files the user skipped (did NOT fit)
   const [skippedStls, setSkippedStls] = useState<Set<string>>(new Set());
 
   const { mills, occupyMillSlot, clearMillSlot } = useMillContext();
-  const { movePuck, updatePuckScreenshot, pucks, updatePuckStatus } = usePuckContext();
+  const { movePuck, updatePuckScreenshot, pucks, setPucks, updatePuckStatus, retirePuck } = usePuckContext();
   const { removeCases, addCases, cases, removeStlFromCase } = useCaseContext();
   const { findFirstAvailableSlot, clearSlot, occupySlot } = useStorageContext();
+  const { addLogEntry } = useMillLogContext();
 
   const selectedPuck = pucks.find((p) => p.puckId === puckId);
   const selectedPuckLoc = selectedPuck?.currentLocation || '';
@@ -62,15 +70,16 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
 
   const newLocation = selectedMillId && selectedSlot ? `${selectedMillId}/${selectedSlot}` : '';
   const displacementNeeded = occupiedInfo.occupiedPuckId && occupiedInfo.occupiedPuckId !== puckId;
+  const lastJobCompleted = !lastJobActive || !!replacementPuckId;
 
   const canNext =
     currentStep === 1
-      ? millValid && slotValid
+      ? millValid && slotValid && lastJobCompleted
       : currentStep === 2
-      ? !!screenshot
+      ? !!screenshot && lastJobCompleted
       : currentStep === 3
-      ? gcodeConfirmed
-      : true;
+      ? gcodeConfirmed && lastJobCompleted
+      : lastJobCompleted;
 
   const nextStep = () => {
     if (currentStep === 1) {
@@ -107,6 +116,7 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
 
   const handleSubmit = async () => {
     if (!selectedMillId || !selectedSlot || !screenshot) return;
+    const prevLoc = selectedPuckLoc;
     setIsSubmitting(true);
     try {
       /* 1. If puck changing location, clear previous location & update */
@@ -169,11 +179,31 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
         `Selected Puck ${puckId} moved to ${selectedMillId} Slot ${selectedSlot}`,
         `Selected Cases ${caseIds.join(', ')} removed from queue and ${caseIds.length} new cases generated`,
       ];
+      if (replacementPuckId) {
+        // Mark puck as retired and clear its mill slot
+        setPucks(pucks.map((p) => (p.puckId === puckId ? { ...p, status: 'retired' } : p)));
+        clearMillSlot(selectedMillId!, selectedSlot!);
+        items.push(`Puck ${puckId} retired after final job (Replaced by ${replacementPuckId})`);
+      }
       if (displacementNeeded) {
         items.unshift(`Old Puck ${occupiedInfo.occupiedPuckId} relocated to Storage Rack`);
       }
       setSummaryItems(items);
       setShowSummary(true);
+
+      // 7. Log entry
+      addLogEntry({
+        logId: generateLogId(),
+        timestamp: new Date().toISOString(),
+        puckId,
+        previousLocation: prevLoc,
+        newLocation: `${selectedMillId}/${selectedSlot}`,
+        caseIds,
+        technicianName: undefined,
+        lastJobTriggered: !!replacementPuckId,
+        newPuckId: replacementPuckId || null,
+        notes: '',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -225,12 +255,23 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
             <p className="text-xs opacity-80 mb-4">{puckId}</p>
             <div className="flex-1 overflow-auto">
               {currentStep === 1 && (
-                <MillSlotSelector
-                  selectedMillId={selectedMillId}
-                  setSelectedMillId={setSelectedMillId}
-                  selectedSlot={selectedSlot}
-                  setSelectedSlot={setSelectedSlot}
-                />
+                <>
+                  <MillSlotSelector
+                    selectedMillId={selectedMillId}
+                    setSelectedMillId={setSelectedMillId}
+                    selectedSlot={selectedSlot}
+                    setSelectedSlot={setSelectedSlot}
+                  />
+                  {millValid && slotValid && (
+                    <button
+                      type="button"
+                      onClick={() => setLastJobActive(true)}
+                      className="mt-4 px-3 py-2 rounded text-xs font-medium border border-[#BB86FC] text-[#BB86FC] bg-transparent hover:bg-[#BB86FC]/20"
+                    >
+                      Last Job (Replace Puck)
+                    </button>
+                  )}
+                </>
               )}
               {currentStep === 2 && (
                 <ScreenshotUploader screenshot={screenshot} setScreenshot={setScreenshot} />
@@ -245,6 +286,7 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
                 <SubmissionSummary
                   items={summaryItems}
                   onDone={onClose}
+                  title={replacementPuckId ? 'Milling Assignment Completed. Puck Replaced Successfully.' : undefined}
                 />
               ) : currentStep === 4 && (
                 <FinalSummary
@@ -330,6 +372,15 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
           vacantSlot={findFirstAvailableSlot()?.fullLocation}
           onConfirm={handleRelocationConfirm}
           onCancel={() => setShowRelocation(false)}
+        />
+      )}
+      {lastJobActive && (
+        <LastJobModal
+          onCancel={() => setLastJobActive(false)}
+          onConfirm={(id) => {
+            setReplacementPuckId(id);
+            setLastJobActive(false);
+          }}
         />
       )}
     </div>

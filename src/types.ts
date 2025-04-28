@@ -45,6 +45,19 @@ export interface Mill {
   slots: MillSlot[];
 }
 
+export interface MillLogEntry {
+  logId: string;
+  timestamp: string; // ISO string
+  puckId: string;
+  previousLocation: string;
+  newLocation: string;
+  caseIds: string[];
+  technicianName?: string;
+  lastJobTriggered: boolean;
+  newPuckId?: string | null;
+  notes?: string;
+}
+
 export interface DashboardData {
   cases: CamCase[];
   pucks: Puck[];

@@ -5,6 +5,7 @@ import PuckList from './pucks/PuckList';
 import ConfirmFitModal from './modals/ConfirmFitModal';
 import ViewStorageModal from './modals/ViewStorageModal';
 import ViewMillSlotsModal from './modals/ViewMillSlotsModal';
+import MillLogModal from './modals/MillLogModal';
 import { useCaseContext } from '../context/CaseContext';
 
 const DashboardLayout: React.FC = () => {
@@ -13,6 +14,7 @@ const DashboardLayout: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showStorage, setShowStorage] = useState(false);
   const [showMillSlots, setShowMillSlots] = useState(false);
+  const [showMillLog, setShowMillLog] = useState(false);
 
   const { cases } = useCaseContext();
 
@@ -82,16 +84,24 @@ const DashboardLayout: React.FC = () => {
         </section>
       </div>
 
-      {/* Proceed button */}
-      <button
-        disabled={!canProceed}
-        onClick={() => setShowModal(true)}
-        className={`fixed bottom-6 right-6 px-5 py-3 rounded-md text-sm font-medium transition shadow-lg ${
-          canProceed ? 'bg-primary text-white hover:bg-primary-light' : 'bg-surface-light text-textDisabled cursor-not-allowed'
-        }`}
-      >
-        Proceed to Confirm Fit
-      </button>
+      {/* Proceed & Mill Log buttons */}
+      <div className="fixed bottom-6 right-6 flex gap-3">
+        <button
+          onClick={() => setShowMillLog(true)}
+          className="px-4 py-2 rounded-md bg-surface text-textPrimary border border-borderMuted hover:bg-surface-light text-sm"
+        >
+          View Mill Log
+        </button>
+        <button
+          disabled={!canProceed}
+          onClick={() => setShowModal(true)}
+          className={`px-5 py-3 rounded-md text-sm font-medium transition shadow-lg ${
+            canProceed ? 'bg-primary text-white hover:bg-primary-light' : 'bg-surface-light text-textDisabled cursor-not-allowed'
+          }`}
+        >
+          Proceed to Confirm Fit
+        </button>
+      </div>
 
       {showModal && (
         <ConfirmFitModal
@@ -104,6 +114,8 @@ const DashboardLayout: React.FC = () => {
       {showStorage && <ViewStorageModal onClose={() => setShowStorage(false)} />}
 
       {showMillSlots && <ViewMillSlotsModal onClose={() => setShowMillSlots(false)} />}
+
+      {showMillLog && <MillLogModal onClose={() => setShowMillLog(false)} />}
     </div>
   );
 };

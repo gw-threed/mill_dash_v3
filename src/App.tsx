@@ -4,6 +4,7 @@ import { CaseProvider } from './context/CaseContext';
 import { PuckProvider } from './context/PuckContext';
 import { StorageProvider } from './context/StorageContext';
 import { MillProvider } from './context/MillContext';
+import { MillLogProvider } from './context/MillLogContext';
 import PuckList from './components/pucks/PuckList';
 import DashboardLayout from './components/DashboardLayout';
 
@@ -11,7 +12,9 @@ const Providers: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <CaseProvider>
     <PuckProvider>
       <StorageProvider>
-        <MillProvider>{children}</MillProvider>
+        <MillProvider>
+          <MillLogProvider>{children}</MillLogProvider>
+        </MillProvider>
       </StorageProvider>
     </PuckProvider>
   </CaseProvider>
