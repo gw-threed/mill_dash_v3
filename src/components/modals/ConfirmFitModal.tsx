@@ -228,61 +228,61 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
             </div>
           </div>
         </div>
-        {/* Actions */}
-        <div className="mt-4 flex justify-between">
+        {/* Action Buttons */}
+        <div className="mt-4 flex justify-end space-x-2">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
           >
             Cancel
           </button>
-          <div className="space-x-2">
-            {currentStep > 1 && (
-              <button
-                onClick={prevStep}
-                className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
-              >
-                Back
-              </button>
-            )}
+
+          {currentStep > 1 && (
             <button
-              disabled={!canNext || showSummary || isSubmitting}
-              onClick={isLast ? handleSubmit : nextStep}
-              className={`px-4 py-2 rounded text-sm font-medium transition flex items-center justify-center min-w-[180px] ${
-                isLast ? 'bg-green-600 hover:bg-green-500' : 'bg-[#BB86FC] hover:brightness-110'
-              }`}
+              onClick={prevStep}
+              className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
             >
-              {isSubmitting ? (
-                <>
-                  <svg
-                    className="animate-spin h-4 w-4 mr-2"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8"
-                    />
-                  </svg>
-                  Submitting…
-                </>
-              ) : isLast ? (
-                'Submit Milling Assignment'
-              ) : (
-                'Next'
-              )}
+              Back
             </button>
-          </div>
+          )}
+
+          <button
+            disabled={!canNext || showSummary || isSubmitting}
+            onClick={isLast ? handleSubmit : nextStep}
+            className={`px-4 py-2 rounded text-sm font-medium transition flex items-center justify-center min-w-[150px] ${
+              isLast ? 'bg-green-600 hover:bg-green-500' : 'bg-[#BB86FC] hover:brightness-110'
+            }`}
+          >
+            {isSubmitting ? (
+              <>
+                <svg
+                  className="animate-spin h-4 w-4 mr-2"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8"
+                  />
+                </svg>
+                Submitting…
+              </>
+            ) : isLast ? (
+              'Submit Milling Assignment'
+            ) : (
+              'Next'
+            )}
+          </button>
         </div>
       </div>
       {showRelocation && displacementNeeded && selectedMillId && (
@@ -293,7 +293,7 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
           slotName={selectedSlot || '1'}
           occupiedPuckId={occupiedInfo.occupiedPuckId}
           occupiedShade={occupiedInfo.occupiedShade}
-          vacantSlot={undefined}
+          vacantSlot={findFirstAvailableSlot()?.fullLocation}
           onConfirm={handleRelocationConfirm}
           onCancel={() => setShowRelocation(false)}
         />
