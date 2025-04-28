@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: theme('fontFamily.sans');
+    color: theme('colors.textPrimary');
+    background-color: theme('colors.background');
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: theme('colors.textPrimary');
+    font-weight: 600;
+  }
+
+  input, select, textarea {
+    @apply bg-surface-light border border-borderMuted text-textPrimary placeholder-textSecondary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary-light;
+  }
+} 

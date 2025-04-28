@@ -15,7 +15,7 @@ const Tile: React.FC<{
   <button
     onClick={onClick}
     className={`flex flex-col items-center justify-center w-32 h-20 rounded-md transition transform hover:-translate-y-1 hover:shadow-lg text-white text-sm p-2 ${
-      isSelected ? 'bg-[#BB86FC]' : 'bg-[#1E1E1E]'
+      isSelected ? 'bg-primary' : 'bg-surface'
     }`}
   >
     <span className="font-semibold text-lg">{label}</span>
@@ -75,11 +75,11 @@ const ShadeTiles: React.FC = () => {
             onClick={() => setShowOther((prev) => !prev)}
           />
           {showOther && (
-            <div className="absolute z-10 mt-2 bg-[#1E1E1E] text-white rounded shadow-lg p-2 max-h-60 overflow-y-auto w-40">
+            <div className="absolute z-10 mt-2 bg-surface text-textPrimary rounded shadow-lg p-2 max-h-60 overflow-y-auto w-40">
               {otherShades.map(({ shade, count }) => (
                 <button
                   key={shade}
-                  className="flex justify-between w-full text-sm py-1 px-2 hover:bg-[#2b2b2b] rounded"
+                  className="flex justify-between w-full text-sm py-1 px-2 hover:bg-surface-light rounded"
                   onClick={() => handleSelect(shade)}
                 >
                   <span>{shade}</span>

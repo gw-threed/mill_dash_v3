@@ -26,14 +26,14 @@ const DashboardLayout: React.FC = () => {
   const canProceed = selectedCaseIds.length > 0 && !!selectedPuckId;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#121212] text-white relative">
+    <div className="min-h-screen flex flex-col bg-background text-textPrimary relative">
       {/* Header */}
-      <header className="px-6 py-4 border-b border-gray-800 bg-[#1E1E1E] flex flex-col gap-4">
+      <header className="px-6 py-4 border-b border-borderMuted bg-background flex flex-col gap-4">
         {/* Top row */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           {/* Title & stats */}
           <div>
-            <h1 className="text-2xl font-bold tracking-wide">Mill Dashboard</h1>
+            <h1 className="text-2xl font-bold tracking-wide text-primary">Mill Dashboard</h1>
             <div className="text-xs sm:text-sm opacity-80 mt-1 space-x-4">
               <span>Total Cases: {totalCases}</span>
               <span>Total Units: {totalUnits}</span>
@@ -44,8 +44,8 @@ const DashboardLayout: React.FC = () => {
 
           {/* Action buttons */}
           <div className="flex gap-2 shrink-0">
-            <button onClick={() => setShowStorage(true)} className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs">View Storage</button>
-            <button onClick={() => setShowMillSlots(true)} className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs">View Mill Slots</button>
+            <button onClick={() => setShowStorage(true)} className="px-3 py-1 rounded border border-borderMuted text-textPrimary text-xs hover:bg-surface-light">View Storage</button>
+            <button onClick={() => setShowMillSlots(true)} className="px-3 py-1 rounded border border-borderMuted text-textPrimary text-xs hover:bg-surface-light">View Mill Slots</button>
             <button
               onClick={() => {
                 window.localStorage.clear();
@@ -58,23 +58,26 @@ const DashboardLayout: React.FC = () => {
           </div>
         </div>
 
+        {/* Divider */}
+        <div className="w-full h-px bg-borderMuted mt-2" />
+
         {/* Shade tiles centered */}
-        <div className="w-full flex justify-center">
+        <div className="w-full flex justify-center mt-3">
           <ShadeTiles />
         </div>
       </header>
 
       {/* Main content */}
-      <div className="flex flex-1 gap-6 px-4 pb-4 overflow-hidden flex-col md:flex-row">
+      <div className="flex flex-1 gap-6 px-6 pb-6 mt-8 overflow-hidden flex-col md:flex-row">
         {/* Cases column */}
-        <section className="md:basis-2/5 md:flex-1 min-h-0 overflow-y-auto">
-          <h2 className="text-lg font-semibold mb-3">CAM-Ready Cases</h2>
+        <section className="md:basis-2/5 md:flex-1 min-h-0 overflow-y-auto bg-surface rounded-md p-6 border border-borderMuted">
+          <h2 className="text-lg font-semibold mb-4 text-primary-light">CAM-Ready Cases</h2>
           <CaseList selectedIds={selectedCaseIds} setSelectedIds={setSelectedCaseIds} />
         </section>
 
         {/* Pucks column */}
-        <section className="md:basis-3/5 md:flex-1 min-h-0 overflow-y-auto">
-          <h2 className="text-lg font-semibold mb-3">Available Pucks</h2>
+        <section className="md:basis-3/5 md:flex-1 min-h-0 overflow-y-auto bg-surface rounded-md p-6 border border-borderMuted">
+          <h2 className="text-lg font-semibold mb-4 text-primary-light">Available Pucks</h2>
           <PuckList selectedPuckId={selectedPuckId} setSelectedPuckId={setSelectedPuckId} />
         </section>
       </div>
@@ -84,7 +87,7 @@ const DashboardLayout: React.FC = () => {
         disabled={!canProceed}
         onClick={() => setShowModal(true)}
         className={`fixed bottom-6 right-6 px-5 py-3 rounded-md text-sm font-medium transition shadow-lg ${
-          canProceed ? 'bg-primary text-white hover:bg-primary-light' : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+          canProceed ? 'bg-primary text-white hover:bg-primary-light' : 'bg-surface-light text-textDisabled cursor-not-allowed'
         }`}
       >
         Proceed to Confirm Fit
