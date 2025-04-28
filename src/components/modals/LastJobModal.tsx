@@ -7,9 +7,11 @@ import { Puck } from '../../types';
 interface Props {
   onConfirm: (replacementPuckId: string) => void;
   onCancel: () => void;
+  expectedShade: string;
+  expectedThickness: string;
 }
 
-const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel }) => {
+const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, expectedThickness }) => {
   const { pucks, setPucks } = usePuckContext();
   const { findFirstAvailableSlot, occupySlot } = useStorageContext();
 
@@ -47,6 +49,12 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel }) => {
     const lookup = MATERIAL_LOOKUP.find((m) => m.materialId === materialId);
     if (!lookup) {
       setError('Material ID not found in lookup');
+      setParsed(null);
+      return;
+    }
+
+    if (lookup.shade !== expectedShade || lookup.thickness !== expectedThickness) {
+      setError(`Puck must be ${expectedShade} ${expectedThickness} to replace depleted one`);
       setParsed(null);
       return;
     }

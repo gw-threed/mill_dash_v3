@@ -376,6 +376,8 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
       )}
       {lastJobActive && (
         <LastJobModal
+          expectedShade={selectedPuck?.shade || ''}
+          expectedThickness={selectedPuck?.thickness || ''}
           onCancel={() => setLastJobActive(false)}
           onConfirm={(id) => {
             setReplacementPuckId(id);
