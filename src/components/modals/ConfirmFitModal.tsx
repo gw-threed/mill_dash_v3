@@ -29,6 +29,9 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
   const [summaryItems, setSummaryItems] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Keep track of stl files the user skipped (did NOT fit)
+  const [skippedStls, setSkippedStls] = useState<Set<string>>(new Set());
+
   const { mills, occupyMillSlot, clearMillSlot } = useMillContext();
   const { movePuck, updatePuckScreenshot, pucks, updatePuckStatus } = usePuckContext();
   const { removeCases, addCases, cases, removeStlFromCase } = useCaseContext();
@@ -90,6 +93,18 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
 
   const isLast = currentStep === 4;
 
+  const toggleSkipStl = (filename: string) => {
+    setSkippedStls((prev) => {
+      const next = new Set(prev);
+      if (next.has(filename)) {
+        next.delete(filename);
+      } else {
+        next.add(filename);
+      }
+      return next;
+    });
+  };
+
   const handleSubmit = async () => {
     if (!selectedMillId || !selectedSlot || !screenshot) return;
     setIsSubmitting(true);
@@ -126,9 +141,28 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
       }
 
       /* 5. Case queue maintenance */
-      removeCases(caseIds);
-      const seed = generateSeedData();
-      addCases(seed.cases.slice(0, caseIds.length));
+      // For each selected case, process STL files that were NOT skipped. Any skipped files remain in queue.
+      caseIds.forEach((cid) => {
+        const c = cases.find((cc) => cc.caseId === cid);
+        if (!c) return;
+
+        const remainingStls = c.stlFiles.filter((f) => skippedStls.has(f));
+
+        if (remainingStls.length === 0) {
+          // all units processed, remove whole case
+          removeCases([cid]);
+        } else {
+          // Build updated tooth numbers from filenames
+          const updatedTeeth = remainingStls.map((fname) => {
+            const parts = fname.split('|');
+            return parts.length >= 3 ? parseInt(parts[2], 10) : null;
+          }).filter((n): n is number => n !== null && !Number.isNaN(n));
+
+          // Replace existing case with updated data
+          removeCases([cid]);
+          addCases([{ ...c, stlFiles: remainingStls, toothNumbers: updatedTeeth, units: updatedTeeth.length }]);
+        }
+      });
 
       /* 6. Build summary */
       const items: string[] = [
@@ -162,12 +196,12 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
                   <div key={id}>
                     <p className="text-sm font-semibold mb-1">{id}</p>
                     <ul className="space-y-1">
-                      {c.stlFiles.map((f) => (
+                      {c.stlFiles.filter((f)=>!skippedStls.has(f)).map((f) => (
                         <li key={f} className="flex justify-between items-center bg-surface-light px-2 py-1 rounded">
                           <span className="truncate">{f}</span>
                           <button
-                            onClick={() => removeStlFromCase(c.caseId, f)}
-                            className="text-textSecondary hover:text-primary transition"
+                            onClick={() => toggleSkipStl(f)}
+                            className={`text-textSecondary transition ${skippedStls.has(f) ? 'text-green-400' : 'hover:text-primary'}`}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                               <path

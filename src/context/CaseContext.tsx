@@ -25,18 +25,35 @@ export const CaseProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addCase = (newCase: CamCase) => setCases((prev) => [...prev, newCase]);
   const addCases = (newCases: CamCase[]) => setCases((prev) => [...prev, ...newCases]);
   const removeCases = (ids: string[]) => setCases((prev) => prev.filter((c) => !ids.includes(c.caseId)));
-  const removeStlFromCase = (caseId: string, filename: string) =>
-    setCases((prev) =>
-      prev.map((c) =>
-        c.caseId === caseId
-          ? {
-              ...c,
-              stlFiles: c.stlFiles.filter((f) => f !== filename),
-              units: Math.max(0, c.units - 1),
-            }
-          : c,
-      ),
-    );
+  const removeStlFromCase = (caseId: string, filename: string) => {
+    setCases((prev) => {
+      return prev.flatMap((c) => {
+        if (c.caseId !== caseId) return [c];
+
+        // Filter out the STL file being removed
+        const updatedStlFiles = c.stlFiles.filter((f) => f !== filename);
+
+        // Attempt to parse the tooth number from the filename (3rd pipe-delimited segment)
+        const parts = filename.split('|');
+        const toothNum = parts.length >= 3 ? parseInt(parts[2], 10) : NaN;
+        const updatedTeeth = !Number.isNaN(toothNum)
+          ? c.toothNumbers.filter((t) => t !== toothNum)
+          : c.toothNumbers;
+
+        // If no STL files remain, remove the case entirely
+        if (updatedStlFiles.length === 0) {
+          return [];
+        }
+
+        return [{
+          ...c,
+          stlFiles: updatedStlFiles,
+          toothNumbers: updatedTeeth,
+          units: updatedTeeth.length,
+        }];
+      });
+    });
+  };
   const resetCases = () => setCases(seed.cases);
 
   const value: CaseContextValue = {
