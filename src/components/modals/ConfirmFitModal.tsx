@@ -217,155 +217,165 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
       <div className="absolute inset-0 bg-black opacity-50" onClick={onClose} />
       <div className="relative z-10 bg-[#1E1E1E] text-white rounded-lg w-full max-w-5xl p-6 flex flex-col max-h-[90vh] overflow-hidden">
         <ConfirmFitProgressBar currentStep={currentStep} />
-        <div className="flex flex-1 gap-4 overflow-hidden">
-          {/* Left - cases */}
-          <div className="basis-1/2 bg-[#2D2D2D] rounded p-4 overflow-y-auto">
-            <h4 className="font-semibold mb-2">Selected Cases ({caseIds.length})</h4>
-            <div className="space-y-3 text-xs opacity-80">
-              {caseIds.map((id) => {
-                const c = cases.find((cc) => cc.caseId === id);
-                if (!c) return null;
-                return (
-                  <div key={id}>
-                    <p className="text-sm font-semibold mb-1">{id}</p>
-                    <ul className="space-y-1">
-                      {c.stlFiles.filter((f)=>!skippedStls.has(f)).map((f) => (
-                        <li key={f} className="flex justify-between items-center bg-surface-light px-2 py-1 rounded">
-                          <span className="truncate">{f}</span>
-                          <button
-                            onClick={() => toggleSkipStl(f)}
-                            className={`text-textSecondary transition ${
-                              skippedStls.has(f) ? 'text-green-400' : 'hover:text-primary'
-                            } ${gcodeConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={gcodeConfirmed}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                              <path
-                                fillRule="evenodd"
-                                d="M9 2.25A2.25 2.25 0 0011.25 0h1.5A2.25 2.25 0 0015 2.25V3h5.25a.75.75 0 010 1.5h-.708l-.772 13.805A3.75 3.75 0 0115.028 22.5H8.972a3.75 3.75 0 01-3.742-4.195L4.458 4.5H3.75a.75.75 0 010-1.5H9v-.75zm1.5.75v-.75a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v.75h-3z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
+        
+        {showSummary ? (
+          // Full-width summary when submission is complete
+          <div className="flex-1 bg-[#2D2D2D] rounded p-4 overflow-y-auto">
+            <SubmissionSummary
+              items={summaryItems}
+              onDone={onClose}
+              title={replacementPuckId ? 'Milling Assignment Completed. Puck Replaced Successfully.' : undefined}
+            />
           </div>
-          {/* Right - puck and step content placeholder */}
-          <div className="basis-1/2 bg-[#2D2D2D] rounded p-4 overflow-y-auto flex flex-col">
-            <h4 className="font-semibold mb-2">Selected Puck</h4>
-            <p className="text-xs opacity-80 mb-4">{puckId}</p>
-            <div className="flex-1 overflow-auto">
-              {currentStep === 1 && (
-                <>
-                  <MillSlotSelector
-                    selectedMillId={selectedMillId}
-                    setSelectedMillId={setSelectedMillId}
-                    selectedSlot={selectedSlot}
-                    setSelectedSlot={setSelectedSlot}
+        ) : (
+          // Regular two-column layout before submission
+          <div className="flex flex-1 gap-4 overflow-hidden">
+            {/* Left - cases */}
+            <div className="basis-1/2 bg-[#2D2D2D] rounded p-4 overflow-y-auto">
+              <h4 className="font-semibold mb-2">Selected Cases ({caseIds.length})</h4>
+              <div className="space-y-3 text-xs opacity-80">
+                {caseIds.map((id) => {
+                  const c = cases.find((cc) => cc.caseId === id);
+                  if (!c) return null;
+                  return (
+                    <div key={id}>
+                      <p className="text-sm font-semibold mb-1">{id}</p>
+                      <ul className="space-y-1">
+                        {c.stlFiles.filter((f)=>!skippedStls.has(f)).map((f) => (
+                          <li key={f} className="flex justify-between items-center bg-surface-light px-2 py-1 rounded">
+                            <span className="truncate">{f}</span>
+                            <button
+                              onClick={() => toggleSkipStl(f)}
+                              className={`text-textSecondary transition ${
+                                skippedStls.has(f) ? 'text-green-400' : 'hover:text-primary'
+                              } ${gcodeConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={gcodeConfirmed}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                                <path
+                                  fillRule="evenodd"
+                                  d="M9 2.25A2.25 2.25 0 0011.25 0h1.5A2.25 2.25 0 0015 2.25V3h5.25a.75.75 0 010 1.5h-.708l-.772 13.805A3.75 3.75 0 0115.028 22.5H8.972a3.75 3.75 0 01-3.742-4.195L4.458 4.5H3.75a.75.75 0 010-1.5H9v-.75zm1.5.75v-.75a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v.75h-3z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Right - puck and step content placeholder */}
+            <div className="basis-1/2 bg-[#2D2D2D] rounded p-4 overflow-y-auto flex flex-col">
+              <h4 className="font-semibold mb-2">Selected Puck</h4>
+              <p className="text-xs opacity-80 mb-4">{puckId}</p>
+              <div className="flex-1 overflow-auto">
+                {currentStep === 1 && (
+                  <>
+                    <MillSlotSelector
+                      selectedMillId={selectedMillId}
+                      setSelectedMillId={setSelectedMillId}
+                      selectedSlot={selectedSlot}
+                      setSelectedSlot={setSelectedSlot}
+                    />
+                    {millValid && slotValid && (
+                      <button
+                        type="button"
+                        onClick={() => setLastJobActive(true)}
+                        className="mt-4 px-3 py-2 rounded text-xs font-medium border border-[#BB86FC] text-[#BB86FC] bg-transparent hover:bg-[#BB86FC]/20"
+                      >
+                        Last Job (Replace Puck)
+                      </button>
+                    )}
+                  </>
+                )}
+                {currentStep === 2 && (
+                  <ScreenshotUploader screenshot={screenshot} setScreenshot={setScreenshot} />
+                )}
+                {currentStep === 3 && (
+                  <GcodeConfirmation
+                    gcodeConfirmed={gcodeConfirmed}
+                    setGcodeConfirmed={setGcodeConfirmed}
                   />
-                  {millValid && slotValid && (
-                    <button
-                      type="button"
-                      onClick={() => setLastJobActive(true)}
-                      className="mt-4 px-3 py-2 rounded text-xs font-medium border border-[#BB86FC] text-[#BB86FC] bg-transparent hover:bg-[#BB86FC]/20"
-                    >
-                      Last Job (Replace Puck)
-                    </button>
-                  )}
-                </>
-              )}
-              {currentStep === 2 && (
-                <ScreenshotUploader screenshot={screenshot} setScreenshot={setScreenshot} />
-              )}
-              {currentStep === 3 && (
-                <GcodeConfirmation
-                  gcodeConfirmed={gcodeConfirmed}
-                  setGcodeConfirmed={setGcodeConfirmed}
-                />
-              )}
-              {showSummary ? (
-                <SubmissionSummary
-                  items={summaryItems}
-                  onDone={onClose}
-                  title={replacementPuckId ? 'Milling Assignment Completed. Puck Replaced Successfully.' : undefined}
-                />
-              ) : currentStep === 4 && (
-                <FinalSummary
-                  caseIds={caseIds}
-                  puckId={puckId}
-                  millId={selectedMillId!}
-                  slotName={selectedSlot || '1'}
-                />
-              )}
-              {currentStep !== 1 && (
-                <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                  Step {currentStep} content placeholder
-                </div>
-              )}
+                )}
+                {currentStep === 4 && !showSummary && (
+                  <FinalSummary
+                    caseIds={caseIds}
+                    puckId={puckId}
+                    millId={selectedMillId!}
+                    slotName={selectedSlot || '1'}
+                  />
+                )}
+                {currentStep !== 1 && currentStep !== 4 && (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                    Step {currentStep} content placeholder
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        {/* Action Buttons */}
-        <div className="mt-4 flex justify-end space-x-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
-          >
-            Cancel
-          </button>
-
-          {currentStep > 1 && (
+        )}
+        
+        {/* Action Buttons - Only show when not in summary view */}
+        {!showSummary && (
+          <div className="mt-4 flex justify-end space-x-2">
             <button
-              onClick={prevStep}
+              onClick={onClose}
               className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
             >
-              Back
+              Cancel
             </button>
-          )}
 
-          <button
-            disabled={!canNext || showSummary || isSubmitting}
-            onClick={isLast ? handleSubmit : nextStep}
-            className={`px-4 py-2 rounded text-sm font-medium transition flex items-center justify-center min-w-[150px] ${
-              isLast ? 'bg-green-600 hover:bg-green-500' : 'bg-[#BB86FC] hover:brightness-110'
-            }`}
-          >
-            {isSubmitting ? (
-              <>
-                <svg
-                  className="animate-spin h-4 w-4 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8"
-                  />
-                </svg>
-                Submitting…
-              </>
-            ) : isLast ? (
-              'Submit Milling Assignment'
-            ) : (
-              'Next'
+            {currentStep > 1 && (
+              <button
+                onClick={prevStep}
+                className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
+              >
+                Back
+              </button>
             )}
-          </button>
-        </div>
+
+            <button
+              disabled={!canNext || isSubmitting}
+              onClick={isLast ? handleSubmit : nextStep}
+              className={`px-4 py-2 rounded text-sm font-medium transition flex items-center justify-center min-w-[150px] ${
+                isLast ? 'bg-green-600 hover:bg-green-500' : 'bg-[#BB86FC] hover:brightness-110'
+              }`}
+            >
+              {isSubmitting ? (
+                <>
+                  <svg
+                    className="animate-spin h-4 w-4 mr-2"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8"
+                    />
+                  </svg>
+                  Submitting…
+                </>
+              ) : isLast ? (
+                'Submit Milling Assignment'
+              ) : (
+                'Next'
+              )}
+            </button>
+          </div>
+        )}
       </div>
       {showRelocation && displacementNeeded && selectedMillId && (
         <RelocationModal
