@@ -102,6 +102,18 @@ const generateCaseId = (() => {
   };
 })();
 
+// Function to generate additional case IDs starting from a higher number
+const generateAdditionalCaseId = (() => {
+  let counter = 100; // Start from a higher number to avoid collisions
+  return () => {
+    const id = counter.toString().padStart(3, '0');
+    counter += 1;
+    const alpha = String.fromCharCode(65 + randomInt(0, 25));
+    const alpha2 = String.fromCharCode(65 + randomInt(0, 25));
+    return `${alpha}${alpha2}${id}`;
+  };
+})();
+
 const generateCamCases = (): CamCase[] => {
   const cases: CamCase[] = [];
   const requiredSingles = Math.ceil(45 * 0.5);
@@ -145,6 +157,48 @@ const generateCamCases = (): CamCase[] => {
   }
 
   return cases;
+};
+
+// New function to generate 30 additional mock cases
+export const generateAdditionalCases = (): CamCase[] => {
+  const additionalCases: CamCase[] = [];
+  
+  for (let i = 0; i < 30; i++) {
+    const caseId = generateAdditionalCaseId();
+    
+    // Randomize between 1-6 units per case for more variety
+    const units = randomInt(1, 6);
+    
+    const toothNumbers: number[] = [];
+    while (toothNumbers.length < units) {
+      const num = randomInt(1, 32);
+      if (!toothNumbers.includes(num)) {
+        toothNumbers.push(num);
+      }
+    }
+    
+    const shade = randomChoice(SHADE_LIST);
+    
+    // Mix of crowns, bridges, and inlays
+    const restorationTypes = ['Crown', 'Bridge', 'Inlay'];
+    
+    const stlFiles = toothNumbers.map(
+      (tooth) => `${caseId}|${randomChoice(restorationTypes)}|${tooth}|${shade}.stl`,
+    );
+    
+    additionalCases.push({
+      caseId,
+      doctorName: randomChoice(DOCTOR_NAMES),
+      officeName: randomChoice(OFFICE_NAMES),
+      shade,
+      units,
+      toothNumbers,
+      stlFiles,
+      status: 'cam_ready',
+    });
+  }
+  
+  return additionalCases;
 };
 
 const generateStorageSlots = (): StorageSlot[] => {

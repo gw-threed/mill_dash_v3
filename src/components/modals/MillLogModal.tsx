@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useMillLogContext } from '../../context/MillLogContext';
 import { useMillContext } from '../../context/MillContext';
 import { usePuckContext } from '../../context/PuckContext';
+import { useCaseContext } from '../../context/CaseContext';
 import { MillLogEntry } from '../../types';
 import ConfirmFitModal from './ConfirmFitModal';
+import { generateAdditionalCases } from '../../data/seed';
 
 interface Props {
   onClose: () => void;
@@ -13,6 +15,7 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
   const { logs } = useMillLogContext();
   const { mills } = useMillContext();
   const { pucks } = usePuckContext();
+  const { addCases } = useCaseContext();
   
   const [query, setQuery] = useState('');
   const [showReassignModal, setShowReassignModal] = useState(false);
@@ -52,6 +55,12 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
     setShowReassignModal(false);
     setSelectedLog(null);
   };
+  
+  const handleAddMockCases = () => {
+    const newCases = generateAdditionalCases();
+    addCases(newCases);
+    alert(`Added ${newCases.length} new mock cases`);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -59,7 +68,15 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
       <div className="relative z-10 bg-[#1E1E1E] text-white rounded-lg p-6 max-w-6xl w-full max-h-[90vh] overflow-auto animate-modal-in">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">Mill Log ({logs.length})</h3>
-          <button onClick={onClose} className="text-sm px-3 py-1 bg-gray-600 rounded">Close</button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleAddMockCases}
+              className="text-sm px-3 py-1 bg-[#BB86FC] rounded"
+            >
+              Add 30 Mock Cases
+            </button>
+            <button onClick={onClose} className="text-sm px-3 py-1 bg-gray-600 rounded">Close</button>
+          </div>
         </div>
 
         <input
