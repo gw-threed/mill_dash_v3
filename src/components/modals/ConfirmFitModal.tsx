@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ConfirmFitProgressBar from './ConfirmFitProgressBar';
 import MillSlotSelector from './MillSlotSelector';
 import RelocationModal from './RelocationModal';
@@ -18,12 +18,22 @@ interface Props {
   caseIds: string[];
   puckId: string;
   onClose: () => void;
+  isReassignment?: boolean;
+  originalLocation?: string;
+  onReassignmentComplete?: (newLocation: string) => void;
 }
 
 // Simple unique id generator for logs
 const generateLogId = () => `log-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
-const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
+const ConfirmFitModal: React.FC<Props> = ({ 
+  caseIds, 
+  puckId, 
+  onClose, 
+  isReassignment = false,
+  originalLocation = '',
+  onReassignmentComplete
+}) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedMillId, setSelectedMillId] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>('');
@@ -43,10 +53,17 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
   const { movePuck, updatePuckScreenshot, pucks, setPucks, updatePuckStatus, retirePuck } = usePuckContext();
   const { removeCases, addCases, cases, removeStlFromCase } = useCaseContext();
   const { findFirstAvailableSlot, clearSlot, occupySlot } = useStorageContext();
-  const { addLogEntry } = useMillLogContext();
+  const { addLogEntry, addRelocationLogEntry } = useMillLogContext();
 
   const selectedPuck = pucks.find((p) => p.puckId === puckId);
   const selectedPuckLoc = selectedPuck?.currentLocation || '';
+
+  // For reassignment, initialize with the existing puck's screenshot
+  useEffect(() => {
+    if (isReassignment && selectedPuck?.screenshotUrl) {
+      setScreenshot(selectedPuck.screenshotUrl);
+    }
+  }, [isReassignment, selectedPuck]);
 
   const occupiedInfo = (() => {
     if (!selectedMillId || !selectedSlot) return { occupiedPuckId: undefined, occupiedShade: undefined };
@@ -119,12 +136,17 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
 
   const handleSubmit = async () => {
     if (!selectedMillId || !selectedSlot || !screenshot) return;
-    const prevLoc = selectedPuckLoc;
+    const prevLoc = isReassignment ? originalLocation : selectedPuckLoc;
     setIsSubmitting(true);
     try {
       /* 1. If puck changing location, clear previous location & update */
-      if (selectedPuckLoc !== newLocation) {
-        if (selectedPuckLoc) {
+      if (isReassignment || selectedPuckLoc !== newLocation) {
+        if (isReassignment && originalLocation) {
+          // For reassignment, clear the original mill slot
+          const [oldMillId, oldSlotName] = originalLocation.split('/');
+          clearMillSlot(oldMillId, oldSlotName);
+        } else if (selectedPuckLoc) {
+          // For normal assignment, clear the current location
           if (selectedPuckLoc.includes('/')) {
             const [oldMillId, oldSlotName] = selectedPuckLoc.split('/');
             clearMillSlot(oldMillId, oldSlotName);
@@ -132,6 +154,8 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
             clearSlot(selectedPuckLoc);
           }
         }
+        
+        // Update puck location
         movePuck(puckId, newLocation);
         updatePuckStatus(puckId, 'in_mill');
       }
@@ -153,60 +177,91 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
         occupySlot(vacantLoc, occupiedInfo.occupiedPuckId!);
       }
 
-      /* 5. Case queue maintenance */
-      // For each selected case, process STL files that were NOT skipped. Any skipped files remain in queue.
-      caseIds.forEach((cid) => {
-        const c = cases.find((cc) => cc.caseId === cid);
-        if (!c) return;
+      /* 5. Case queue maintenance - only for normal assignments, not reassignments */
+      if (!isReassignment) {
+        // For each selected case, process STL files that were NOT skipped. Any skipped files remain in queue.
+        caseIds.forEach((cid) => {
+          const c = cases.find((cc) => cc.caseId === cid);
+          if (!c) return;
 
-        const remainingStls = c.stlFiles.filter((f) => skippedStls.has(f));
+          const remainingStls = c.stlFiles.filter((f) => skippedStls.has(f));
 
-        if (remainingStls.length === 0) {
-          // all units processed, remove whole case
-          removeCases([cid]);
-        } else {
-          // Build updated tooth numbers from filenames
-          const updatedTeeth = remainingStls.map((fname) => {
-            const parts = fname.split('|');
-            return parts.length >= 3 ? parseInt(parts[2], 10) : null;
-          }).filter((n): n is number => n !== null && !Number.isNaN(n));
+          if (remainingStls.length === 0) {
+            // all units processed, remove whole case
+            removeCases([cid]);
+          } else {
+            // Build updated tooth numbers from filenames
+            const updatedTeeth = remainingStls.map((fname) => {
+              const parts = fname.split('|');
+              return parts.length >= 3 ? parseInt(parts[2], 10) : null;
+            }).filter((n): n is number => n !== null && !Number.isNaN(n));
 
-          // Replace existing case with updated data
-          removeCases([cid]);
-          addCases([{ ...c, stlFiles: remainingStls, toothNumbers: updatedTeeth, units: updatedTeeth.length }]);
-        }
-      });
+            // Replace existing case with updated data
+            removeCases([cid]);
+            addCases([{ ...c, stlFiles: remainingStls, toothNumbers: updatedTeeth, units: updatedTeeth.length }]);
+          }
+        });
+      }
 
       /* 6. Build summary */
-      const items: string[] = [
-        `Selected Puck ${puckId} moved to ${selectedMillId} Slot ${selectedSlot}`,
-        `Selected Cases ${caseIds.join(', ')} removed from queue and ${caseIds.length} new cases generated`,
-      ];
-      if (replacementPuckId) {
-        // Mark puck as retired and clear its mill slot
-        setPucks(pucks.map((p) => (p.puckId === puckId ? { ...p, status: 'retired' } : p)));
-        clearMillSlot(selectedMillId!, selectedSlot!);
-        items.push(`Puck ${puckId} retired after final job (Replaced by ${replacementPuckId})`);
+      let items: string[] = [];
+      
+      if (isReassignment) {
+        items = [
+          `Puck ${puckId} reassigned from ${originalLocation} to ${selectedMillId} Slot ${selectedSlot}`,
+          `New G-code confirmed for ${caseIds.length} case(s)`
+        ];
+      } else {
+        items = [
+          `Selected Puck ${puckId} moved to ${selectedMillId} Slot ${selectedSlot}`,
+          `Selected Cases ${caseIds.join(', ')} removed from queue and ${caseIds.length} new cases generated`,
+        ];
+        
+        if (replacementPuckId) {
+          // Mark puck as retired and clear its mill slot
+          setPucks(pucks.map((p) => (p.puckId === puckId ? { ...p, status: 'retired' } : p)));
+          clearMillSlot(selectedMillId!, selectedSlot!);
+          items.push(`Puck ${puckId} retired after final job (Replaced by ${replacementPuckId})`);
+        }
       }
+      
       if (displacementNeeded) {
         items.unshift(`Old Puck ${occupiedInfo.occupiedPuckId} relocated to Storage Rack`);
       }
+      
       setSummaryItems(items);
       setShowSummary(true);
 
       // 7. Log entry
-      addLogEntry({
-        logId: generateLogId(),
-        timestamp: new Date().toISOString(),
-        puckId,
-        previousLocation: prevLoc,
-        newLocation: `${selectedMillId}/${selectedSlot}`,
-        caseIds,
-        technicianName: undefined,
-        lastJobTriggered: !!replacementPuckId,
-        newPuckId: replacementPuckId || null,
-        notes: '',
-      });
+      if (isReassignment) {
+        // Add a relocation log entry for the reassignment
+        addRelocationLogEntry(
+          puckId,
+          originalLocation, 
+          `${selectedMillId}/${selectedSlot}`,
+          caseIds,
+          "G-code regenerated for new mill"
+        );
+        
+        // Notify parent component that reassignment is complete
+        if (onReassignmentComplete) {
+          onReassignmentComplete(`${selectedMillId}/${selectedSlot}`);
+        }
+      } else {
+        // Normal log entry for initial assignment
+        addLogEntry({
+          logId: generateLogId(),
+          timestamp: new Date().toISOString(),
+          puckId,
+          previousLocation: prevLoc,
+          newLocation: `${selectedMillId}/${selectedSlot}`,
+          caseIds,
+          technicianName: undefined,
+          lastJobTriggered: !!replacementPuckId,
+          newPuckId: replacementPuckId || null,
+          notes: '',
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -216,6 +271,15 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-50" onClick={onClose} />
       <div className="relative z-10 bg-[#1E1E1E] text-white rounded-lg w-full max-w-5xl p-6 flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">
+            {isReassignment 
+              ? `Reassign Puck ${puckId} from ${originalLocation}` 
+              : 'Confirm Fit and G-code'
+            }
+          </h3>
+        </div>
+        
         <ConfirmFitProgressBar currentStep={currentStep} />
         
         {showSummary ? (
@@ -224,7 +288,13 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
             <SubmissionSummary
               items={summaryItems}
               onDone={onClose}
-              title={replacementPuckId ? 'Milling Assignment Completed. Puck Replaced Successfully.' : undefined}
+              title={
+                isReassignment 
+                  ? 'Mill Reassignment Completed Successfully'
+                  : replacementPuckId 
+                    ? 'Milling Assignment Completed. Puck Replaced Successfully.' 
+                    : undefined
+              }
             />
           </div>
         ) : (
@@ -244,21 +314,23 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
                         {c.stlFiles.filter((f)=>!skippedStls.has(f)).map((f) => (
                           <li key={f} className="flex justify-between items-center bg-surface-light px-2 py-1 rounded">
                             <span className="truncate">{f}</span>
-                            <button
-                              onClick={() => toggleSkipStl(f)}
-                              className={`text-textSecondary transition ${
-                                skippedStls.has(f) ? 'text-green-400' : 'hover:text-primary'
-                              } ${gcodeConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              disabled={gcodeConfirmed}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                                <path
-                                  fillRule="evenodd"
-                                  d="M9 2.25A2.25 2.25 0 0011.25 0h1.5A2.25 2.25 0 0015 2.25V3h5.25a.75.75 0 010 1.5h-.708l-.772 13.805A3.75 3.75 0 0115.028 22.5H8.972a3.75 3.75 0 01-3.742-4.195L4.458 4.5H3.75a.75.75 0 010-1.5H9v-.75zm1.5.75v-.75a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v.75h-3z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                            </button>
+                            {!isReassignment && (
+                              <button
+                                onClick={() => toggleSkipStl(f)}
+                                className={`text-textSecondary transition ${
+                                  skippedStls.has(f) ? 'text-green-400' : 'hover:text-primary'
+                                } ${gcodeConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                disabled={gcodeConfirmed}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M9 2.25A2.25 2.25 0 0011.25 0h1.5A2.25 2.25 0 0015 2.25V3h5.25a.75.75 0 010 1.5h-.708l-.772 13.805A3.75 3.75 0 0115.028 22.5H8.972a3.75 3.75 0 01-3.742-4.195L4.458 4.5H3.75a.75.75 0 010-1.5H9v-.75zm1.5.75v-.75a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v.75h-3z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </button>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -269,7 +341,9 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
             </div>
             {/* Right - puck and step content placeholder */}
             <div className="basis-1/2 bg-[#2D2D2D] rounded p-4 overflow-y-auto flex flex-col">
-              <h4 className="font-semibold mb-2">Selected Puck</h4>
+              <h4 className="font-semibold mb-2">
+                {isReassignment ? 'Reassigning Puck' : 'Selected Puck'}
+              </h4>
               <p className="text-xs opacity-80 mb-4">{puckId}</p>
               <div className="flex-1 overflow-auto">
                 {currentStep === 1 && (
@@ -280,7 +354,7 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
                       selectedSlot={selectedSlot}
                       setSelectedSlot={setSelectedSlot}
                     />
-                    {millValid && slotValid && (
+                    {!isReassignment && millValid && slotValid && (
                       <button
                         type="button"
                         onClick={() => setLastJobActive(true)}
@@ -292,12 +366,17 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
                   </>
                 )}
                 {currentStep === 2 && (
-                  <ScreenshotUploader screenshot={screenshot} setScreenshot={setScreenshot} />
+                  <ScreenshotUploader 
+                    screenshot={screenshot} 
+                    setScreenshot={setScreenshot}
+                    title={isReassignment ? "Upload New Screenshot for Reassigned Mill" : undefined}
+                  />
                 )}
                 {currentStep === 3 && (
                   <GcodeConfirmation
                     gcodeConfirmed={gcodeConfirmed}
                     setGcodeConfirmed={setGcodeConfirmed}
+                    title={isReassignment ? "Confirm G-code for New Mill" : undefined}
                   />
                 )}
                 {currentStep === 4 && !showSummary && (
@@ -306,6 +385,8 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
                     puckId={puckId}
                     millId={selectedMillId!}
                     slotName={selectedSlot || '1'}
+                    isReassignment={isReassignment}
+                    originalLocation={originalLocation}
                   />
                 )}
                 {currentStep !== 1 && currentStep !== 4 && (
@@ -369,7 +450,7 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
                   Submitting…
                 </>
               ) : isLast ? (
-                'Submit Milling Assignment'
+                isReassignment ? 'Complete Mill Reassignment' : 'Submit Milling Assignment'
               ) : (
                 'Next'
               )}
@@ -380,7 +461,7 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
       {showRelocation && displacementNeeded && selectedMillId && (
         <RelocationModal
           selectedPuckId={puckId}
-          selectedPuckLoc={selectedPuckLoc}
+          selectedPuckLoc={isReassignment ? originalLocation : selectedPuckLoc}
           millId={selectedMillId}
           slotName={selectedSlot || '1'}
           occupiedPuckId={occupiedInfo.occupiedPuckId}

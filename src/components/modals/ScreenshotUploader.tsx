@@ -3,11 +3,12 @@ import React, { useCallback, useRef, useState } from 'react';
 interface Props {
   screenshot: string | null;
   setScreenshot: (url: string) => void;
+  title?: string;
 }
 
 const ACCEPT_TYPES = ['image/png', 'image/jpeg', 'image/bmp'];
 
-const ScreenshotUploader: React.FC<Props> = ({ screenshot, setScreenshot }) => {
+const ScreenshotUploader: React.FC<Props> = ({ screenshot, setScreenshot, title }) => {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -49,6 +50,7 @@ const ScreenshotUploader: React.FC<Props> = ({ screenshot, setScreenshot }) => {
       onPaste={handlePaste}
       className="w-full h-64 bg-[#2D2D2D] rounded flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-500 relative"
     >
+      {title && <h4 className="font-semibold mb-2">{title}</h4>}
       {screenshot ? (
         <img src={screenshot} alt="screenshot" className="max-h-full max-w-full object-contain p-2" />
       ) : (

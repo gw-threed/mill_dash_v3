@@ -6,11 +6,11 @@ interface MillLogContextValue {
   logs: MillLogEntry[];
   addLogEntry: (entry: MillLogEntry) => void;
   addRelocationLogEntry: (
-    originalLogId: string,
     puckId: string,
     previousLocation: string,
     newLocation: string,
-    caseIds: string[]
+    caseIds: string[],
+    notes?: string
   ) => void;
 }
 
@@ -25,11 +25,11 @@ export const MillLogProvider: React.FC<{ children: ReactNode }> = ({ children })
   const addLogEntry = (entry: MillLogEntry) => setLogs((prev) => [...prev, entry]);
   
   const addRelocationLogEntry = (
-    originalLogId: string,
     puckId: string,
     previousLocation: string,
     newLocation: string,
-    caseIds: string[]
+    caseIds: string[],
+    notes = 'Mill reassignment'
   ) => {
     const newEntry: MillLogEntry = {
       logId: generateLogId(),
@@ -39,7 +39,7 @@ export const MillLogProvider: React.FC<{ children: ReactNode }> = ({ children })
       newLocation,
       caseIds,
       lastJobTriggered: false,
-      notes: `Relocated from ${previousLocation} due to mill reassignment`,
+      notes,
     };
     
     setLogs((prev) => [...prev, newEntry]);

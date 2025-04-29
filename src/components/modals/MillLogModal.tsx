@@ -2,32 +2,21 @@ import React, { useState, useMemo } from 'react';
 import { useMillLogContext } from '../../context/MillLogContext';
 import { useMillContext } from '../../context/MillContext';
 import { usePuckContext } from '../../context/PuckContext';
-import { useStorageContext } from '../../context/StorageContext';
 import { MillLogEntry } from '../../types';
-import RelocationModal from './RelocationModal';
+import ConfirmFitModal from './ConfirmFitModal';
 
 interface Props {
   onClose: () => void;
 }
 
 const MillLogModal: React.FC<Props> = ({ onClose }) => {
-  const { logs, addRelocationLogEntry } = useMillLogContext();
-  const { mills, occupyMillSlot, clearMillSlot } = useMillContext();
-  const { movePuck, updatePuckStatus, pucks } = usePuckContext();
-  const { findFirstAvailableSlot, clearSlot, occupySlot } = useStorageContext();
+  const { logs } = useMillLogContext();
+  const { mills } = useMillContext();
+  const { pucks } = usePuckContext();
   
   const [query, setQuery] = useState('');
-  const [editingLogId, setEditingLogId] = useState<string | null>(null);
-  const [selectedNewMill, setSelectedNewMill] = useState<string>('');
-  const [selectedNewSlot, setSelectedNewSlot] = useState<string>('');
-  const [showRelocation, setShowRelocation] = useState(false);
-  const [relocationInfo, setRelocationInfo] = useState<{
-    puckToMove: string;
-    fromLocation: string;
-    toMill: string;
-    toSlot: string;
-    displacedPuckId: string | null;
-  } | null>(null);
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<MillLogEntry | null>(null);
 
   // Helper to check if a date is today
   const isToday = (dateString: string) => {
@@ -54,115 +43,14 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
       .reverse();
   }, [logs, query]);
 
-  const handleEditClick = (logId: string) => {
-    setEditingLogId(logId);
-    setSelectedNewMill('');
-    setSelectedNewSlot('');
+  const handleReassignClick = (log: MillLogEntry) => {
+    setSelectedLog(log);
+    setShowReassignModal(true);
   };
-
-  const handleSaveReallocation = (log: MillLogEntry) => {
-    if (!selectedNewMill || !selectedNewSlot) return;
-    
-    // Get old location details
-    const [oldMillId, oldSlotName] = log.newLocation.split('/');
-    
-    // New location string
-    const newLocation = `${selectedNewMill}/${selectedNewSlot}`;
-    
-    // Check if the selected slot is already occupied by a different puck
-    const selectedMill = mills.find(m => m.id === selectedNewMill);
-    const selectedSlot = selectedMill?.slots.find(s => s.slotName === selectedNewSlot);
-    
-    if (selectedSlot?.occupied && selectedSlot.puckId !== log.puckId) {
-      // We need to show the relocation modal
-      setRelocationInfo({
-        puckToMove: log.puckId,
-        fromLocation: log.newLocation,
-        toMill: selectedNewMill,
-        toSlot: selectedNewSlot,
-        displacedPuckId: selectedSlot.puckId
-      });
-      setShowRelocation(true);
-      return;
-    }
-    
-    // If slot not occupied or occupied by same puck, proceed normally
-    completeReallocation(log, oldMillId, oldSlotName, newLocation);
-  };
-
-  const completeReallocation = (log: MillLogEntry, oldMillId: string, oldSlotName: string, newLocation: string) => {
-    // Add a new relocation log entry instead of updating the existing one
-    addRelocationLogEntry(
-      log.logId,
-      log.puckId,
-      log.newLocation, // Previous location is the current location
-      newLocation,     // New location
-      log.caseIds      // Same case IDs
-    );
-    
-    // Clear old mill slot
-    clearMillSlot(oldMillId, oldSlotName);
-    
-    // Occupy new mill slot
-    const [newMillId, newSlotName] = newLocation.split('/');
-    occupyMillSlot(newMillId, newSlotName, log.puckId);
-    
-    // Update puck location
-    movePuck(log.puckId, newLocation);
-    
-    // Reset edit state
-    setEditingLogId(null);
-  };
-
-  const handleRelocationConfirm = () => {
-    if (!relocationInfo) return;
-    
-    const { puckToMove, fromLocation, toMill, toSlot, displacedPuckId } = relocationInfo;
-    
-    if (displacedPuckId) {
-      // 1. Find a storage slot for the displaced puck
-      const vacantSlot = findFirstAvailableSlot();
-      if (!vacantSlot) {
-        alert('No vacant storage slots available!');
-        return;
-      }
-      
-      // 2. Move the displaced puck to storage
-      movePuck(displacedPuckId, vacantSlot.fullLocation);
-      updatePuckStatus(displacedPuckId, 'in_storage');
-      occupySlot(vacantSlot.fullLocation, displacedPuckId);
-      
-      // 3. Log the relocation of the displaced puck
-      const displacedLog = logs.find(l => l.puckId === displacedPuckId && l.newLocation === `${toMill}/${toSlot}`);
-      if (displacedLog) {
-        addRelocationLogEntry(
-          displacedLog.logId,
-          displacedPuckId,
-          `${toMill}/${toSlot}`,
-          vacantSlot.fullLocation,
-          displacedLog.caseIds
-        );
-      }
-    }
-    
-    // 4. Process the original reallocation
-    const [oldMillId, oldSlotName] = fromLocation.split('/');
-    const newLocation = `${toMill}/${toSlot}`;
-    
-    const log = logs.find(l => l.puckId === puckToMove && l.newLocation === fromLocation);
-    if (log) {
-      completeReallocation(log, oldMillId, oldSlotName, newLocation);
-    }
-    
-    // Reset state
-    setShowRelocation(false);
-    setRelocationInfo(null);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingLogId(null);
-    setSelectedNewMill('');
-    setSelectedNewSlot('');
+  
+  const handleReassignmentComplete = () => {
+    setShowReassignModal(false);
+    setSelectedLog(null);
   };
 
   return (
@@ -200,54 +88,13 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
             <tbody>
               {filtered.map((log) => {
                 const isTodaysJob = isToday(log.timestamp);
-                const isEditing = editingLogId === log.logId;
 
                 return (
                   <tr key={log.logId} className="odd:bg-[#1E1E1E] even:bg-[#2A2A2A]">
                     <td className="p-2 border border-gray-700 whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
                     <td className="p-2 border border-gray-700 whitespace-nowrap">{log.puckId}</td>
                     <td className="p-2 border border-gray-700">{log.previousLocation}</td>
-                    <td className="p-2 border border-gray-700">
-                      {isEditing ? (
-                        <div className="flex flex-col space-y-2">
-                          <select 
-                            value={selectedNewMill}
-                            onChange={(e) => {
-                              setSelectedNewMill(e.target.value);
-                              setSelectedNewSlot('');
-                            }}
-                            className="bg-[#3D3D3D] text-white p-1 rounded text-xs border border-gray-600"
-                          >
-                            <option value="">Select Mill</option>
-                            {mills.map((mill) => (
-                              <option key={mill.id} value={mill.id}>
-                                {mill.id} ({mill.model})
-                              </option>
-                            ))}
-                          </select>
-                          
-                          {selectedNewMill && (
-                            <select 
-                              value={selectedNewSlot}
-                              onChange={(e) => setSelectedNewSlot(e.target.value)}
-                              className="bg-[#3D3D3D] text-white p-1 rounded text-xs border border-gray-600"
-                            >
-                              <option value="">Select Slot</option>
-                              {mills
-                                .find(m => m.id === selectedNewMill)
-                                ?.slots
-                                .map((slot) => (
-                                  <option key={slot.slotName} value={slot.slotName}>
-                                    Slot {slot.slotName} {slot.occupied && slot.puckId !== log.puckId ? `(Occupied by ${slot.puckId})` : ''}
-                                  </option>
-                                ))}
-                            </select>
-                          )}
-                        </div>
-                      ) : (
-                        log.newLocation
-                      )}
-                    </td>
+                    <td className="p-2 border border-gray-700">{log.newLocation}</td>
                     <td className="p-2 border border-gray-700 max-w-xs truncate" title={log.caseIds.join(', ')}>
                       {log.caseIds.join(', ')}
                     </td>
@@ -255,35 +102,13 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
                     <td className="p-2 border border-gray-700 text-center">{log.lastJobTriggered ? '✅' : ''}</td>
                     <td className="p-2 border border-gray-700">{log.notes || '-'}</td>
                     <td className="p-2 border border-gray-700 text-center">
-                      {isEditing ? (
-                        <div className="flex space-x-1">
-                          <button
-                            onClick={() => handleSaveReallocation(log)}
-                            disabled={!selectedNewMill || !selectedNewSlot}
-                            className={`text-xs px-2 py-1 rounded ${
-                              !selectedNewMill || !selectedNewSlot ? 
-                              'bg-gray-700 opacity-50 cursor-not-allowed' : 
-                              'bg-green-600 hover:bg-green-500'
-                            }`}
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="text-xs px-2 py-1 rounded bg-gray-600 hover:bg-gray-500"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        isTodaysJob && log.newLocation.includes('/') && (
-                          <button
-                            onClick={() => handleEditClick(log.logId)}
-                            className="text-xs px-2 py-1 rounded bg-[#BB86FC] hover:brightness-110"
-                          >
-                            Reassign
-                          </button>
-                        )
+                      {isTodaysJob && log.newLocation.includes('/') && (
+                        <button
+                          onClick={() => handleReassignClick(log)}
+                          className="text-xs px-2 py-1 rounded bg-[#BB86FC] hover:brightness-110"
+                        >
+                          Reassign
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -301,25 +126,15 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
         </div>
       </div>
       
-      {/* Relocation Modal */}
-      {showRelocation && relocationInfo && (
-        <RelocationModal
-          selectedPuckId={relocationInfo.puckToMove}
-          selectedPuckLoc={relocationInfo.fromLocation}
-          millId={relocationInfo.toMill}
-          slotName={relocationInfo.toSlot}
-          occupiedPuckId={relocationInfo.displacedPuckId || undefined}
-          occupiedShade={
-            relocationInfo.displacedPuckId 
-              ? pucks.find(p => p.puckId === relocationInfo.displacedPuckId)?.shade 
-              : undefined
-          }
-          vacantSlot={findFirstAvailableSlot()?.fullLocation}
-          onConfirm={handleRelocationConfirm}
-          onCancel={() => {
-            setShowRelocation(false);
-            setRelocationInfo(null);
-          }}
+      {/* Confirm Fit Modal for reassignment */}
+      {showReassignModal && selectedLog && (
+        <ConfirmFitModal
+          caseIds={selectedLog.caseIds}
+          puckId={selectedLog.puckId}
+          onClose={() => setShowReassignModal(false)}
+          isReassignment={true}
+          originalLocation={selectedLog.newLocation}
+          onReassignmentComplete={handleReassignmentComplete}
         />
       )}
     </div>

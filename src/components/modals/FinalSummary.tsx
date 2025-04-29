@@ -7,15 +7,30 @@ interface Props {
   puckId: string;
   millId: string;
   slotName: string;
+  isReassignment?: boolean;
+  originalLocation?: string;
 }
 
-const FinalSummary: React.FC<Props> = ({ caseIds, puckId, millId, slotName }) => {
+const FinalSummary: React.FC<Props> = ({ 
+  caseIds, 
+  puckId, 
+  millId, 
+  slotName,
+  isReassignment = false,
+  originalLocation = ''
+}) => {
   const { pucks } = usePuckContext();
   const { cases } = useCaseContext();
   const puck = pucks.find((p) => p.puckId === puckId);
   const selectedCases = cases.filter((c) => caseIds.includes(c.caseId));
   return (
     <div className="text-sm space-y-3">
+      {isReassignment && (
+        <div className="bg-[#3D3D3D] p-3 rounded mb-3">
+          <h5 className="font-semibold mb-1 text-[#BB86FC]">Mill Reassignment</h5>
+          <p>Moving job from {originalLocation} to {millId} / Slot {slotName}</p>
+        </div>
+      )}
       <div>
         <h5 className="font-semibold mb-1">Destination</h5>
         <p>

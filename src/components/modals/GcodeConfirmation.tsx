@@ -3,11 +3,13 @@ import React from 'react';
 interface Props {
   gcodeConfirmed: boolean;
   setGcodeConfirmed: (val: boolean) => void;
+  title?: string;
 }
 
-const GcodeConfirmation: React.FC<Props> = ({ gcodeConfirmed, setGcodeConfirmed }) => {
+const GcodeConfirmation: React.FC<Props> = ({ gcodeConfirmed, setGcodeConfirmed, title }) => {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+      {title && <h4 className="font-semibold mb-2">{title}</h4>}
       {!gcodeConfirmed ? (
         <>
           <p className="text-sm opacity-80">Please confirm that the G-code has been generated successfully.</p>
