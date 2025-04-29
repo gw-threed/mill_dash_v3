@@ -115,7 +115,12 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-50" onClick={onCancel} />
       <div className="relative z-10 bg-[#1E1E1E] text-white rounded-md p-6 w-[420px] space-y-5">
-        <h3 className="text-lg font-semibold">Last Job – Replace Depleted Puck</h3>
+        <div>
+          <h3 className="text-lg font-semibold">Last Job – Replace Depleted Puck</h3>
+          <p className="text-sm text-gray-300 mt-1">
+            Replacing puck: <span className="font-medium text-white">{expectedShade} {expectedThickness}</span>
+          </p>
+        </div>
         {step === 1 && (
           <div className="space-y-4 text-sm">
             <p>Step 1: Scan Inventory QR Code to verify new puck pull.</p>
