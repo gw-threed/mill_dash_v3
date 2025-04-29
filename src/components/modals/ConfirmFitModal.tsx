@@ -103,6 +103,9 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
   const isLast = currentStep === 4;
 
   const toggleSkipStl = (filename: string) => {
+    // If G-code is confirmed, don't allow toggling (deleting) STL files
+    if (gcodeConfirmed) return;
+    
     setSkippedStls((prev) => {
       const next = new Set(prev);
       if (next.has(filename)) {
@@ -231,7 +234,10 @@ const ConfirmFitModal: React.FC<Props> = ({ caseIds, puckId, onClose }) => {
                           <span className="truncate">{f}</span>
                           <button
                             onClick={() => toggleSkipStl(f)}
-                            className={`text-textSecondary transition ${skippedStls.has(f) ? 'text-green-400' : 'hover:text-primary'}`}
+                            className={`text-textSecondary transition ${
+                              skippedStls.has(f) ? 'text-green-400' : 'hover:text-primary'
+                            } ${gcodeConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={gcodeConfirmed}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                               <path
