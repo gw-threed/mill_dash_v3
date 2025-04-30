@@ -26,6 +26,10 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
     thickness: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // State for placement confirmation
+  const [showPlacementConfirmation, setShowPlacementConfirmation] = useState(false);
+  const [storageLocation, setStorageLocation] = useState('');
+  const [createdPuckId, setCreatedPuckId] = useState('');
 
   const parseQr = (val: string) => {
     const parts = val.split('|');
@@ -106,7 +110,10 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
     setPucks([...pucks, newPuck]);
     occupySlot(vacant.fullLocation, newPuck.puckId);
 
-    onConfirm(newPuck.puckId);
+    // Show placement confirmation with large text
+    setShowPlacementConfirmation(true);
+    setStorageLocation(vacant.fullLocation);
+    setCreatedPuckId(newPuck.puckId);
   };
 
   const isQrValid = !!parsed;
@@ -114,7 +121,7 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-50" onClick={onCancel} />
-      <div className="relative z-10 bg-[#1E1E1E] text-white rounded-md p-6 w-[420px] space-y-5">
+      <div className="relative z-10 bg-[#1E1E1E] text-white rounded-md p-6 w-[450px] space-y-5">
         <div>
           <h3 className="text-lg font-semibold">Last Job – Replace Depleted Puck</h3>
           <p className="text-sm text-gray-300 mt-1">
@@ -132,7 +139,7 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
             </button>
           </div>
         )}
-        {step === 2 && (
+        {step === 2 && !showPlacementConfirmation && (
           <div className="space-y-4 text-sm">
             <p>Step 2: Scan or enter the New Puck QR Code:</p>
             <input
@@ -177,6 +184,35 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
           </div>
         )}
       </div>
+
+      {/* Placement confirmation modal */}
+      {showPlacementConfirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-50" />
+          <div className="relative z-10 bg-[#1E1E1E] text-white rounded-lg p-6 w-[500px] space-y-6">
+            <h3 className="text-xl font-semibold">Puck Created Successfully</h3>
+            
+            <div className="bg-gray-800 p-4 rounded-md">
+              <div className="mb-2 text-sm">
+                Place new puck <span className="font-semibold">{createdPuckId}</span> in storage slot:
+              </div>
+              <div className="text-4xl font-bold text-center p-6 bg-[#2D2D2D] rounded-md text-white border-2 border-[#BB86FC]">
+                {storageLocation}
+              </div>
+            </div>
+            
+            <button
+              onClick={() => {
+                setShowPlacementConfirmation(false);
+                onConfirm(createdPuckId);
+              }}
+              className="px-4 py-3 rounded bg-[#BB86FC] hover:brightness-110 w-full text-base font-semibold"
+            >
+              Confirm Placement
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

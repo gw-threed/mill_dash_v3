@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { usePuckContext } from '../../context/PuckContext';
 import { useCaseContext } from '../../context/CaseContext';
 import PuckCard from './PuckCard';
+import AddPuckCard from './AddPuckCard';
 
 interface Props {
   selectedPuckId: string | null;
@@ -36,6 +37,8 @@ const PuckList: React.FC<Props> = ({ selectedPuckId, setSelectedPuckId }) => {
           onSelect={(id) => setSelectedPuckId(id)}
         />
       ))}
+      <AddPuckCard selectedShade={selectedShade} />
+      
       {filtered.length === 0 && (
         <div className="text-gray-400 text-sm">No pucks available for this shade.</div>
       )}
