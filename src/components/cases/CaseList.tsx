@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import CaseCard from './CaseCard';
 import { useCaseContext } from '../../context/CaseContext';
 import { CamCase } from '../../types';
+import { ALL_OTHER_SHADES } from './ShadeTiles';
 
 interface Props {
   selectedIds: string[];
@@ -10,44 +11,101 @@ interface Props {
 
 const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
   const { cases, selectedShade, setSelectedShade } = useCaseContext();
+  
+  // Track the active shade for selected cases
+  const [activeSelectionShade, setActiveSelectionShade] = useState<string | null>(null);
 
-  const filtered = selectedShade ? cases.filter((c) => c.shade === selectedShade) : cases;
-
-  // auto-selection when selectedShade changes
+  // Add activeSelectionShade to window object so it can be accessed by other components
   useEffect(() => {
-    if (selectedShade) {
-      setSelectedIds(filtered.map((c) => c.caseId));
+    // @ts-ignore - Adding property to window
+    window.activeSelectionShade = activeSelectionShade;
+  }, [activeSelectionShade]);
+
+  // Function to get filtered cases based on the selected shade
+  const getFilteredCases = useMemo(() => {
+    if (!selectedShade) {
+      return cases;
+    } else if (selectedShade === ALL_OTHER_SHADES) {
+      // For "Other Shades", get the top 6 shades to exclude them
+      const shadeCounts: Record<string, number> = {};
+      cases.forEach(c => { shadeCounts[c.shade] = (shadeCounts[c.shade] || 0) + 1 });
+      
+      const topShades = Object.entries(shadeCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6)
+        .map(([shade]) => shade);
+      
+      // Return cases that aren't in the top shades
+      return cases.filter(c => !topShades.includes(c.shade));
     } else {
-      setSelectedIds([]);
+      // Regular filtering for a specific shade
+      return cases.filter(c => c.shade === selectedShade);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedShade, JSON.stringify(filtered.map((c) => c.caseId))]);
+  }, [cases, selectedShade]);
+
+  // Reset active selection shade when changing major filtering
+  useEffect(() => {
+    setActiveSelectionShade(null);
+    setSelectedIds([]);
+  }, [selectedShade, setSelectedIds]);
 
   const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    const caseToToggle = cases.find(c => c.caseId === id);
+    if (!caseToToggle) return;
+    
+    setSelectedIds(prev => {
+      // If this case is already selected, just remove it
+      if (prev.includes(id)) {
+        const newSelection = prev.filter(i => i !== id);
+        
+        // If no cases are selected anymore, reset the active selection shade
+        if (newSelection.length === 0) {
+          setActiveSelectionShade(null);
+        }
+        
+        return newSelection;
+      } 
+      // Adding a new case
+      else {
+        // If we don't have an active selection shade yet, set it to this case's shade
+        if (!activeSelectionShade) {
+          setActiveSelectionShade(caseToToggle.shade);
+          return [...prev, id];
+        } 
+        // If we have an active shade and this case matches it, allow selection
+        else if (caseToToggle.shade === activeSelectionShade) {
+          return [...prev, id];
+        } 
+        // Trying to select a case with a different shade - not allowed
+        else {
+          console.log(`Cannot select cases with different shades. Active: ${activeSelectionShade}, Attempted: ${caseToToggle.shade}`);
+          return prev;
+        }
+      }
+    });
   };
 
   const handleCaseClick = (caseData: CamCase) => {
-    if (selectedShade === caseData.shade) {
-      toggleSelect(caseData.caseId);
-    } else {
-      setSelectedShade(caseData.shade);
-    }
+    toggleSelect(caseData.caseId);
   };
-
-  const casesToDisplay = useMemo(() => filtered, [filtered]);
 
   return (
     <div className="space-y-3">
-      {casesToDisplay.map((c) => (
+      {getFilteredCases.map((c) => (
         <CaseCard
           key={c.caseId}
           caseData={c}
           isSelected={selectedIds.includes(c.caseId)}
           onToggle={toggleSelect}
           onCaseClick={handleCaseClick}
+          activeSelectionShade={activeSelectionShade}
         />
       ))}
+      {getFilteredCases.length === 0 && (
+        <div className="text-center py-8 text-textSecondary">
+          No cases available for the selected shade.
+        </div>
+      )}
     </div>
   );
 };

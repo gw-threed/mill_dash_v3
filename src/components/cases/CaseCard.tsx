@@ -7,31 +7,47 @@ interface Props {
   isSelected: boolean;
   onToggle: (caseId: string) => void;
   onCaseClick: (caseData: CamCase) => void;
+  activeSelectionShade: string | null;
 }
 
-const CaseCard: React.FC<Props> = ({ caseData, isSelected, onToggle, onCaseClick }) => {
+const CaseCard: React.FC<Props> = ({ caseData, isSelected, onToggle, onCaseClick, activeSelectionShade }) => {
+  // Determine if this case is selectable (either no active shade or matching shade)
+  const isSelectable = !activeSelectionShade || activeSelectionShade === caseData.shade;
+  
   return (
     <div
-      onClick={() => onCaseClick(caseData)}
+      data-case-id={caseData.caseId}
+      onClick={() => isSelectable && onCaseClick(caseData)}
       className={clsx(
-        'relative bg-[#1E1E1E] text-white p-3 rounded-md flex flex-col shadow transition hover:-translate-y-0.5 hover:shadow-lg',
-        isSelected ? 'ring-2 ring-cyan-400/70 shadow-[0_0_10px_#22D3EE]' : 'ring-0',
+        'case-card relative bg-[#1E1E1E] text-white p-3 rounded-md flex flex-col shadow transition',
+        isSelectable ? 'hover:-translate-y-0.5 hover:shadow-lg' : 'opacity-50 cursor-not-allowed',
+        isSelected ? 'selected ring-2 ring-cyan-400/70 shadow-[0_0_10px_#22D3EE]' : 'ring-0',
       )}
     >
       <label
-        className="absolute left-2 top-1/2 -translate-y-1/2 cursor-pointer"
-        onClick={(e) => e.stopPropagation()}
+        className={clsx(
+          "absolute left-2 top-1/2 -translate-y-1/2",
+          isSelectable ? "cursor-pointer" : "cursor-not-allowed"
+        )}
+        onClick={(e) => { 
+          e.stopPropagation();
+          if (isSelectable) {
+            onToggle(caseData.caseId);
+          }
+        }}
       >
         <input
           type="checkbox"
           checked={isSelected}
-          onChange={() => onToggle(caseData.caseId)}
+          disabled={!isSelectable}
+          onChange={() => isSelectable && onToggle(caseData.caseId)}
           className="sr-only"
         />
         <span
           className={clsx(
             'h-5 w-5 inline-block border rounded-sm border-borderMuted bg-transparent',
-            isSelected && 'border-primary'
+            isSelected && 'border-primary',
+            !isSelectable && 'opacity-50'
           )}
         ></span>
         {isSelected && (

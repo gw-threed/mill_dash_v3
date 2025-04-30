@@ -1,6 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useCaseContext } from '../../context/CaseContext';
 
+// Special constant to represent "all other shades"
+export const ALL_OTHER_SHADES = "ALL_OTHER_SHADES";
+
 interface ShadeCount {
   shade: string;
   count: number;
@@ -53,6 +56,17 @@ const ShadeTiles: React.FC = () => {
     setShowOther(false);
   };
 
+  const handleOtherShadesClick = () => {
+    // If other shades is already selected, clicking again deselects it
+    if (selectedShade === ALL_OTHER_SHADES) {
+      setSelectedShade(null);
+    } else {
+      // When clicking "Other Shades", select all other shades at once
+      setSelectedShade(ALL_OTHER_SHADES);
+    }
+    setShowOther(false);
+  };
+
   return (
     <div className="flex gap-2 overflow-x-auto pb-2">
       {topShades.map(({ shade, count }) => (
@@ -65,30 +79,12 @@ const ShadeTiles: React.FC = () => {
         />
       ))}
       {otherShades.length > 0 && (
-        <div className="relative">
-          <Tile
-            label="Other Shades"
-            count={otherShades.reduce((sum, s) => sum + s.count, 0)}
-            isSelected={Boolean(
-              selectedShade && !topShades.find((t) => t.shade === selectedShade),
-            )}
-            onClick={() => setShowOther((prev) => !prev)}
-          />
-          {showOther && (
-            <div className="absolute z-10 mt-2 bg-surface text-textPrimary rounded shadow-lg p-2 max-h-60 overflow-y-auto w-40">
-              {otherShades.map(({ shade, count }) => (
-                <button
-                  key={shade}
-                  className="flex justify-between w-full text-sm py-1 px-2 hover:bg-surface-light rounded"
-                  onClick={() => handleSelect(shade)}
-                >
-                  <span>{shade}</span>
-                  <span>{count}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <Tile
+          label="Other Shades"
+          count={otherShades.reduce((sum, s) => sum + s.count, 0)}
+          isSelected={selectedShade === ALL_OTHER_SHADES}
+          onClick={handleOtherShadesClick}
+        />
       )}
     </div>
   );

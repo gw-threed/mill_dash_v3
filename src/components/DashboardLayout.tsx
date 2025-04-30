@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import ShadeTiles from './cases/ShadeTiles';
 import CaseList from './cases/CaseList';
 import PuckList from './pucks/PuckList';
@@ -25,6 +25,13 @@ const DashboardLayout: React.FC = () => {
 
   const { cases } = useCaseContext();
   const { pucks } = usePuckContext();
+
+  // Reset selected puck when no cases are selected
+  useEffect(() => {
+    if (selectedCaseIds.length === 0) {
+      setSelectedPuckId(null);
+    }
+  }, [selectedCaseIds]);
 
   const handleBarcodeScanned = useCallback((barcode: string) => {
     // Look for a puck with matching puckId
@@ -143,10 +150,17 @@ const DashboardLayout: React.FC = () => {
           <CaseList selectedIds={selectedCaseIds} setSelectedIds={setSelectedCaseIds} />
         </section>
 
-        {/* Pucks column */}
+        {/* Pucks column - only show when cases are selected */}
         <section className="md:basis-3/5 md:flex-1 min-h-0 overflow-y-auto bg-surface rounded-md p-6 border border-borderMuted">
           <h2 className="text-lg font-semibold mb-4 text-primary-light">Available Pucks</h2>
-          <PuckList selectedPuckId={selectedPuckId} setSelectedPuckId={setSelectedPuckId} />
+          
+          {selectedCaseIds.length > 0 ? (
+            <PuckList selectedPuckId={selectedPuckId} setSelectedPuckId={setSelectedPuckId} />
+          ) : (
+            <div className="text-center py-12 text-textSecondary">
+              <p>Select one or more cases to view available pucks</p>
+            </div>
+          )}
         </section>
       </div>
 

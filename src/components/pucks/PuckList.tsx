@@ -3,6 +3,7 @@ import { usePuckContext } from '../../context/PuckContext';
 import { useCaseContext } from '../../context/CaseContext';
 import PuckCard from './PuckCard';
 import AddPuckCard from './AddPuckCard';
+import { ALL_OTHER_SHADES } from '../cases/ShadeTiles';
 
 interface Props {
   selectedPuckId: string | null;
@@ -11,13 +12,39 @@ interface Props {
 
 const PuckList: React.FC<Props> = ({ selectedPuckId, setSelectedPuckId }) => {
   const { pucks } = usePuckContext();
-  const { selectedShade } = useCaseContext();
+  const { selectedShade, cases } = useCaseContext();
+  const [activeSelectionShade, setActiveSelectionShade] = useState<string | null>(null);
+  
+  // Read the activeSelectionShade from window to keep in sync
+  useEffect(() => {
+    // Check if we have cases selected
+    const checkActiveShade = () => {
+      // @ts-ignore - Reading from window
+      const windowActiveShade = window.activeSelectionShade;
+      if (windowActiveShade !== activeSelectionShade) {
+        setActiveSelectionShade(windowActiveShade);
+      }
+    };
+    
+    // Check immediately
+    checkActiveShade();
+    
+    // Also set up an interval to check regularly for updates
+    const intervalId = setInterval(checkActiveShade, 100);
+    
+    return () => clearInterval(intervalId);
+  }, [activeSelectionShade]);
 
   const filtered = useMemo(() => {
-    if (!selectedShade) return [];
-    const eligible = pucks.filter((p) => p.status !== 'retired');
-    return eligible.filter((p) => p.shade === selectedShade);
-  }, [pucks, selectedShade]);
+    // If we have a specific shade selected from active cases, use that
+    if (activeSelectionShade) {
+      const eligible = pucks.filter((p) => p.status !== 'retired');
+      return eligible.filter((p) => p.shade === activeSelectionShade);
+    }
+    
+    // If no active shade, return empty array
+    return [];
+  }, [pucks, activeSelectionShade]);
 
   useEffect(() => {
     setSelectedPuckId((prev) => {
@@ -25,9 +52,9 @@ const PuckList: React.FC<Props> = ({ selectedPuckId, setSelectedPuckId }) => {
       const stillExists = filtered.find((p) => p.puckId === prev);
       return stillExists ? prev : null;
     });
-  }, [selectedShade]);
+  }, [filtered, setSelectedPuckId]);
 
-  return selectedShade ? (
+  return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {filtered.map((p) => (
         <PuckCard
@@ -37,14 +64,19 @@ const PuckList: React.FC<Props> = ({ selectedPuckId, setSelectedPuckId }) => {
           onSelect={(id) => setSelectedPuckId(id)}
         />
       ))}
-      <AddPuckCard selectedShade={selectedShade} />
+      
+      {activeSelectionShade && (
+        <AddPuckCard selectedShade={activeSelectionShade} />
+      )}
       
       {filtered.length === 0 && (
-        <div className="text-gray-400 text-sm">No pucks available for this shade.</div>
+        <div className="text-gray-400 text-sm mt-4">
+          {activeSelectionShade 
+            ? `No pucks available for shade ${activeSelectionShade}.` 
+            : "Select a case to view available pucks for its shade."}
+        </div>
       )}
     </div>
-  ) : (
-    <div className="text-gray-400 text-sm">Select a shade to view available pucks.</div>
   );
 };
 
