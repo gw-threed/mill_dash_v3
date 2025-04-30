@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import ShadeTiles from './cases/ShadeTiles';
 import CaseList from './cases/CaseList';
 import PuckList from './pucks/PuckList';
@@ -6,7 +6,10 @@ import ConfirmFitModal from './modals/ConfirmFitModal';
 import ViewStorageModal from './modals/ViewStorageModal';
 import ViewMillSlotsModal from './modals/ViewMillSlotsModal';
 import MillLogModal from './modals/MillLogModal';
+import PuckLocationModal from './PuckLocationModal';
 import { useCaseContext } from '../context/CaseContext';
+import { usePuckContext } from '../context/PuckContext';
+import useBarcodeScanner from '../hooks/useBarcodeScanner';
 
 const DashboardLayout: React.FC = () => {
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
@@ -15,8 +18,68 @@ const DashboardLayout: React.FC = () => {
   const [showStorage, setShowStorage] = useState(false);
   const [showMillSlots, setShowMillSlots] = useState(false);
   const [showMillLog, setShowMillLog] = useState(false);
+  
+  // State for puck location display
+  const [scannedPuck, setScannedPuck] = useState<string | null>(null);
+  const [showPuckLocation, setShowPuckLocation] = useState(false);
 
   const { cases } = useCaseContext();
+  const { pucks } = usePuckContext();
+
+  const handleBarcodeScanned = useCallback((barcode: string) => {
+    // Look for a puck with matching puckId
+    const puck = pucks.find(p => p.puckId === barcode);
+    if (puck) {
+      setScannedPuck(barcode);
+      setShowPuckLocation(true);
+      return;
+    }
+    
+    // If not found by puckId, check if it matches a serialNumber
+    const puckBySerial = pucks.find(p => p.serialNumber.toString() === barcode);
+    if (puckBySerial) {
+      setScannedPuck(puckBySerial.puckId);
+      setShowPuckLocation(true);
+      return;
+    }
+    
+    // Check if it's a QR formatted code
+    const parts = barcode.split('|');
+    if (parts.length === 4) {
+      // Format: shrinkageFactor|serialNumber|materialId|lotNumber
+      const shrinkageFactor = parseFloat(parts[0]);
+      const serialNumber = parseInt(parts[1], 10);
+      const materialId = parseInt(parts[2], 10);
+      const lotNumber = parseInt(parts[3], 10);
+      
+      if (!isNaN(serialNumber) && !isNaN(lotNumber)) {
+        // STRICTLY match based on BOTH serial number AND lot number
+        const matchingPuck = pucks.find(p => 
+          p.serialNumber === serialNumber && 
+          p.lotNumber === lotNumber
+        );
+        
+        if (matchingPuck) {
+          setScannedPuck(matchingPuck.puckId);
+          setShowPuckLocation(true);
+          return;
+        } else {
+          // No match found with both criteria
+          console.log(`No puck found matching both serial ${serialNumber} and lot ${lotNumber}`);
+        }
+      } else {
+        console.log('Invalid barcode format - need both serial and lot numbers');
+      }
+    }
+    
+    // Could add an alert or toast message here for unrecognized barcodes
+    console.log('Unrecognized barcode:', barcode);
+  }, [pucks]);
+
+  // Setup barcode scanner
+  useBarcodeScanner(handleBarcodeScanned, {
+    minLength: 4, // Minimum length of a valid barcode
+  });
 
   const totalCases = cases.length;
   const totalUnits = cases.reduce((sum, c) => sum + c.units, 0);
@@ -26,6 +89,9 @@ const DashboardLayout: React.FC = () => {
   }, 0);
 
   const canProceed = selectedCaseIds.length > 0 && !!selectedPuckId;
+  
+  // Get the scanned puck object
+  const scannedPuckObject = scannedPuck ? pucks.find(p => p.puckId === scannedPuck) : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-textPrimary relative">
@@ -84,6 +150,18 @@ const DashboardLayout: React.FC = () => {
         </section>
       </div>
 
+      {/* Global barcode scanning notice */}
+      <div className="fixed bottom-24 left-6 max-w-xs">
+        <div className="bg-[#1E1E1E] text-white text-sm rounded-md shadow-lg px-4 py-3 border border-[#BB86FC]">
+          <p className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#BB86FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Scan any puck barcode to see its location
+          </p>
+        </div>
+      </div>
+
       {/* Proceed & Mill Log buttons */}
       <div className="fixed bottom-6 right-6 flex gap-3">
         <button
@@ -116,6 +194,14 @@ const DashboardLayout: React.FC = () => {
       {showMillSlots && <ViewMillSlotsModal onClose={() => setShowMillSlots(false)} />}
 
       {showMillLog && <MillLogModal onClose={() => setShowMillLog(false)} />}
+      
+      {/* Puck Location Modal */}
+      {showPuckLocation && scannedPuckObject && (
+        <PuckLocationModal 
+          puck={scannedPuckObject} 
+          onClose={() => setShowPuckLocation(false)}
+        />
+      )}
     </div>
   );
 };
