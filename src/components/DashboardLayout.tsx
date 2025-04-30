@@ -7,9 +7,59 @@ import ViewStorageModal from './modals/ViewStorageModal';
 import ViewMillSlotsModal from './modals/ViewMillSlotsModal';
 import MillLogModal from './modals/MillLogModal';
 import PuckLocationModal from './PuckLocationModal';
+import UsedPuckOrderQueueModal from './modals/UsedPuckOrderQueueModal';
+import InventoryAnalysisModal from './modals/InventoryAnalysisModal';
+import MachineAnalysisModal from './modals/MachineAnalysisModal';
 import { useCaseContext } from '../context/CaseContext';
 import { usePuckContext } from '../context/PuckContext';
 import useBarcodeScanner from '../hooks/useBarcodeScanner';
+
+// SVG icon components
+const InventoryIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <path d="M5 8h14M5 12h14M5 16h10" />
+  </svg>
+);
+
+const OrderQueueIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="M6 8h.01M6 12h.01M6 16h.01M10 8h8M10 12h8M10 16h5" />
+  </svg>
+);
+
+const StorageIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
+    <path d="M3 9V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4" />
+    <path d="M12 12v5" />
+  </svg>
+);
+
+const MillIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <circle cx="12" cy="12" r="8" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);
+
+const AnalyticsIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <path d="M3 3v18h18" />
+    <path d="M18 17V9" />
+    <path d="M13 17V5" />
+    <path d="M8 17v-3" />
+  </svg>
+);
+
+const ResetIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+    <path d="M16 21h5v-5" />
+  </svg>
+);
 
 const DashboardLayout: React.FC = () => {
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
@@ -18,6 +68,9 @@ const DashboardLayout: React.FC = () => {
   const [showStorage, setShowStorage] = useState(false);
   const [showMillSlots, setShowMillSlots] = useState(false);
   const [showMillLog, setShowMillLog] = useState(false);
+  const [showUsedPuckQueue, setShowUsedPuckQueue] = useState(false);
+  const [showInventoryAnalysis, setShowInventoryAnalysis] = useState(false);
+  const [showMachineAnalysis, setShowMachineAnalysis] = useState(false);
   
   // State for puck location display
   const [scannedPuck, setScannedPuck] = useState<string | null>(null);
@@ -118,17 +171,64 @@ const DashboardLayout: React.FC = () => {
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-2 shrink-0">
-            <button onClick={() => setShowStorage(true)} className="px-3 py-1 rounded border border-borderMuted text-textPrimary text-xs hover:bg-surface-light">View Storage</button>
-            <button onClick={() => setShowMillSlots(true)} className="px-3 py-1 rounded border border-borderMuted text-textPrimary text-xs hover:bg-surface-light">View Mill Slots</button>
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Analytics Group */}
+            <div className="flex rounded-md overflow-hidden shadow-sm border border-borderMuted">
+              <button 
+                onClick={() => setShowMachineAnalysis(true)}
+                className="px-3 py-2 flex items-center gap-1.5 bg-surface hover:bg-surface-light text-sm transition-colors"
+              >
+                <AnalyticsIcon />
+                <span>Machine Analysis</span>
+              </button>
+              <div className="w-px h-full bg-borderMuted"></div>
+              <button 
+                onClick={() => setShowInventoryAnalysis(true)}
+                className="px-3 py-2 flex items-center gap-1.5 bg-surface hover:bg-surface-light text-sm transition-colors"
+              >
+                <InventoryIcon />
+                <span>Inventory Analysis</span>
+              </button>
+            </div>
+            
+            {/* Inventory Management */}
+            <button 
+              onClick={() => setShowUsedPuckQueue(true)}
+              className="px-3 py-2 flex items-center gap-1.5 bg-surface hover:bg-surface-light text-sm transition-colors rounded-md border border-borderMuted shadow-sm"
+            >
+              <OrderQueueIcon />
+              <span>Order Queue</span>
+            </button>
+            
+            {/* View Group */}
+            <div className="flex rounded-md overflow-hidden shadow-sm border border-borderMuted">
+              <button 
+                onClick={() => setShowStorage(true)}
+                className="px-3 py-2 flex items-center gap-1.5 bg-surface hover:bg-surface-light text-sm transition-colors"
+              >
+                <StorageIcon />
+                <span>Storage</span>
+              </button>
+              <div className="w-px h-full bg-borderMuted"></div>
+              <button 
+                onClick={() => setShowMillSlots(true)}
+                className="px-3 py-2 flex items-center gap-1.5 bg-surface hover:bg-surface-light text-sm transition-colors"
+              >
+                <MillIcon />
+                <span>Mill Slots</span>
+              </button>
+            </div>
+            
+            {/* Reset button */}
             <button
               onClick={() => {
                 window.localStorage.clear();
                 window.location.reload();
               }}
-              className="px-3 py-1 rounded bg-red-600 text-white text-xs"
+              className="px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm flex items-center gap-1.5 shadow-sm transition-colors"
             >
-              Reset
+              <ResetIcon />
+              <span>Reset</span>
             </button>
           </div>
         </div>
@@ -208,6 +308,12 @@ const DashboardLayout: React.FC = () => {
       {showMillSlots && <ViewMillSlotsModal onClose={() => setShowMillSlots(false)} />}
 
       {showMillLog && <MillLogModal onClose={() => setShowMillLog(false)} />}
+      
+      {showUsedPuckQueue && <UsedPuckOrderQueueModal onClose={() => setShowUsedPuckQueue(false)} />}
+      
+      {showInventoryAnalysis && <InventoryAnalysisModal onClose={() => setShowInventoryAnalysis(false)} />}
+      
+      {showMachineAnalysis && <MachineAnalysisModal onClose={() => setShowMachineAnalysis(false)} />}
       
       {/* Puck Location Modal */}
       {showPuckLocation && scannedPuckObject && (

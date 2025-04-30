@@ -43,11 +43,28 @@ const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
     }
   }, [cases, selectedShade]);
 
-  // Reset active selection shade when changing major filtering
+  // Automatically select all cases when a specific shade is selected (excluding Other Shades)
   useEffect(() => {
-    setActiveSelectionShade(null);
-    setSelectedIds([]);
-  }, [selectedShade, setSelectedIds]);
+    if (selectedShade && selectedShade !== ALL_OTHER_SHADES) {
+      // Get IDs of cases with the specific shade
+      const idsToSelect = cases
+        .filter(c => c.shade === selectedShade)
+        .map(c => c.caseId);
+      
+      // Update the selection and the active selection shade
+      setSelectedIds(idsToSelect);
+      setActiveSelectionShade(selectedShade);
+    } else if (selectedShade === ALL_OTHER_SHADES) {
+      // For Other Shades, just filter the view but don't auto-select
+      // Reset selections when switching to Other Shades
+      setSelectedIds([]);
+      setActiveSelectionShade(null);
+    } else if (!selectedShade) {
+      // When no shade is selected, clear the selection
+      setSelectedIds([]);
+      setActiveSelectionShade(null);
+    }
+  }, [selectedShade, cases, setSelectedIds]);
 
   const toggleSelect = (id: string) => {
     const caseToToggle = cases.find(c => c.caseId === id);
