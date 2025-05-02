@@ -35,8 +35,10 @@ const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
         .slice(0, 6)
         .map(([shade]) => shade);
       
-      // Return cases that aren't in the top shades
-      return cases.filter(c => !topShades.includes(c.shade));
+      // Return cases that aren't in the top shades, sorted by shade
+      const otherShadesCases = cases.filter(c => !topShades.includes(c.shade));
+      // Sort by shade alphabetically for easier finding
+      return otherShadesCases.sort((a, b) => a.shade.localeCompare(b.shade));
     } else {
       // Regular filtering for a specific shade
       return cases.filter(c => c.shade === selectedShade);

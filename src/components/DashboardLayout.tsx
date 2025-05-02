@@ -162,11 +162,13 @@ const DashboardLayout: React.FC = () => {
           {/* Title & stats */}
           <div>
             <h1 className="text-2xl font-bold tracking-wide text-primary">Mill Dashboard</h1>
-            <div className="text-xs sm:text-sm opacity-80 mt-1 space-x-4">
-              <span>Total Cases: {totalCases}</span>
-              <span>Total Units: {totalUnits}</span>
-              <span>Selected Cases: {selectedCaseIds.length}</span>
-              <span>Selected Units: {selectedUnits}</span>
+            <div className="flex items-center mt-1 space-x-4">
+              <span className="text-xs sm:text-sm opacity-80">Total Cases: {totalCases}</span>
+              <span className="text-xs sm:text-sm opacity-80">Total Units: {totalUnits}</span>
+              <span className="text-xs sm:text-sm opacity-80">Selected Cases: {selectedCaseIds.length}</span>
+              <div className="px-3 py-1 bg-primary rounded-md flex items-center justify-center shadow-sm">
+                <span className="text-sm sm:text-base font-semibold text-white">Selected Units: {selectedUnits}</span>
+              </div>
             </div>
           </div>
 
