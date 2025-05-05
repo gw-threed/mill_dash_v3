@@ -10,6 +10,7 @@ import PuckLocationModal from './PuckLocationModal';
 import UsedPuckOrderQueueModal from './modals/UsedPuckOrderQueueModal';
 import InventoryAnalysisModal from './modals/InventoryAnalysisModal';
 import MachineAnalysisModal from './modals/MachineAnalysisModal';
+import InventoryModal from './modals/InventoryModal';
 import { useCaseContext } from '../context/CaseContext';
 import { usePuckContext } from '../context/PuckContext';
 import useBarcodeScanner from '../hooks/useBarcodeScanner';
@@ -61,6 +62,14 @@ const ResetIcon = () => (
   </svg>
 );
 
+// Add Inventory icon
+const InventoryPuckIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+  </svg>
+);
+
 const DashboardLayout: React.FC = () => {
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
   const [selectedPuckId, setSelectedPuckId] = useState<string | null>(null);
@@ -71,6 +80,7 @@ const DashboardLayout: React.FC = () => {
   const [showUsedPuckQueue, setShowUsedPuckQueue] = useState(false);
   const [showInventoryAnalysis, setShowInventoryAnalysis] = useState(false);
   const [showMachineAnalysis, setShowMachineAnalysis] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
   
   // State for puck location display
   const [scannedPuck, setScannedPuck] = useState<string | null>(null);
@@ -194,13 +204,23 @@ const DashboardLayout: React.FC = () => {
             </div>
             
             {/* Inventory Management */}
-            <button 
-              onClick={() => setShowUsedPuckQueue(true)}
-              className="px-3 py-2 flex items-center gap-1.5 bg-surface hover:bg-surface-light text-sm transition-colors rounded-md border border-borderMuted shadow-sm"
-            >
-              <OrderQueueIcon />
-              <span>Order Queue</span>
-            </button>
+            <div className="flex rounded-md overflow-hidden shadow-sm border border-borderMuted">
+              <button 
+                onClick={() => setShowUsedPuckQueue(true)}
+                className="px-3 py-2 flex items-center gap-1.5 bg-surface hover:bg-surface-light text-sm transition-colors"
+              >
+                <OrderQueueIcon />
+                <span>Order Queue</span>
+              </button>
+              <div className="w-px h-full bg-borderMuted"></div>
+              <button 
+                onClick={() => setShowInventory(true)}
+                className="px-3 py-2 flex items-center gap-1.5 bg-surface hover:bg-surface-light text-sm transition-colors"
+              >
+                <InventoryPuckIcon />
+                <span>View Inventory</span>
+              </button>
+            </div>
             
             {/* View Group */}
             <div className="flex rounded-md overflow-hidden shadow-sm border border-borderMuted">
@@ -316,6 +336,8 @@ const DashboardLayout: React.FC = () => {
       {showInventoryAnalysis && <InventoryAnalysisModal onClose={() => setShowInventoryAnalysis(false)} />}
       
       {showMachineAnalysis && <MachineAnalysisModal onClose={() => setShowMachineAnalysis(false)} />}
+      
+      {showInventory && <InventoryModal onClose={() => setShowInventory(false)} />}
       
       {/* Puck Location Modal */}
       {showPuckLocation && scannedPuckObject && (

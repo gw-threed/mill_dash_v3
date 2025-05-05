@@ -241,6 +241,7 @@ const generatePucks = (storageSlots: StorageSlot[]): Puck[] => {
     {},
   );
 
+  // Generate storage pucks
   for (const shade of SHADE_LIST) {
     const puckCount = randomInt(1, 3);
     for (let i = 0; i < puckCount; i++) {
@@ -267,6 +268,29 @@ const generatePucks = (storageSlots: StorageSlot[]): Puck[] => {
         currentLocation: slot.fullLocation,
         screenshotUrl: '/puck_placeholder.png',
         status: 'in_storage',
+      });
+    }
+  }
+
+  // Generate inventory pucks - at least 2 of each shade
+  for (const shade of SHADE_LIST) {
+    const inventoryCount = randomInt(2, 4); // 2-4 pucks in inventory per shade
+    for (let i = 0; i < inventoryCount; i++) {
+      const { materialId, thickness } = randomChoice(lookupByShade[shade]);
+      const puckId = `PUCK-${puckCounter.toString().padStart(6, '0')}`;
+      puckCounter += 1;
+
+      pucks.push({
+        puckId,
+        shrinkageFactor: parseFloat((1.22 + Math.random() * 0.05).toFixed(4)),
+        serialNumber: serialCounter++,
+        materialId,
+        lotNumber: randomInt(100000, 999999),
+        shade,
+        thickness,
+        currentLocation: 'Inventory',
+        screenshotUrl: '/puck_placeholder.png',
+        status: 'in_inventory',
       });
     }
   }

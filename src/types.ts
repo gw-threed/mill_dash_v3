@@ -19,7 +19,7 @@ export interface Puck {
   thickness: string;
   currentLocation: string; // e.g., 'storage' or mill name
   screenshotUrl: string;
-  status: 'in_storage' | 'in_mill' | 'retired';
+  status: 'in_storage' | 'in_mill' | 'retired' | 'in_inventory';
 }
 
 export interface StorageSlot {

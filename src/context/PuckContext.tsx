@@ -10,9 +10,12 @@ interface PuckContextValue {
   movePuck: (puckId: string, newLocation: string) => void;
   updatePuckScreenshot: (puckId: string, screenshotUrl: string) => void;
   retirePuck: (puckId: string) => void;
-  updatePuckStatus: (puckId: string, status: 'in_storage' | 'in_mill' | 'retired') => void;
+  updatePuckStatus: (puckId: string, status: 'in_storage' | 'in_mill' | 'retired' | 'in_inventory') => void;
   resetPucks: () => void;
   createPuck: (shade: string, thickness: string, storageLocation: string) => Puck;
+  moveToInventory: (puckId: string) => void;
+  moveFromInventoryToStorage: (puckId: string, storageLocation: string) => void;
+  getInventoryPucks: () => Puck[];
 }
 
 const PuckContext = createContext<PuckContextValue | undefined>(undefined);
@@ -34,7 +37,7 @@ export const PuckProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updatePuckStatus = (
     puckId: string,
-    status: 'in_storage' | 'in_mill' | 'retired',
+    status: 'in_storage' | 'in_mill' | 'retired' | 'in_inventory',
   ) => setPucks((prev) => prev.map((p) => (p.puckId === puckId ? { ...p, status } : p)));
 
   const resetPucks = () => setPucks(seed.pucks);
@@ -77,6 +80,31 @@ export const PuckProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return newPuck;
   };
 
+  // Move a puck to inventory status
+  const moveToInventory = (puckId: string) => {
+    setPucks((prev) => 
+      prev.map((p) => (p.puckId === puckId 
+        ? { ...p, status: 'in_inventory', currentLocation: 'Inventory' } 
+        : p
+      ))
+    );
+  };
+
+  // Move a puck from inventory to a storage location
+  const moveFromInventoryToStorage = (puckId: string, storageLocation: string) => {
+    setPucks((prev) => 
+      prev.map((p) => (p.puckId === puckId 
+        ? { ...p, status: 'in_storage', currentLocation: storageLocation } 
+        : p
+      ))
+    );
+  };
+
+  // Get all pucks in inventory
+  const getInventoryPucks = () => {
+    return pucks.filter(p => p.status === 'in_inventory');
+  };
+
   const value: PuckContextValue = {
     pucks,
     setPucks,
@@ -86,6 +114,9 @@ export const PuckProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     updatePuckStatus,
     resetPucks,
     createPuck,
+    moveToInventory,
+    moveFromInventoryToStorage,
+    getInventoryPucks,
   };
 
   return <PuckContext.Provider value={value}>{children}</PuckContext.Provider>;

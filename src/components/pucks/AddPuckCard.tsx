@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import clsx from 'clsx';
 import { usePuckContext } from '../../context/PuckContext';
 import { useStorageContext } from '../../context/StorageContext';
-import { MATERIAL_LOOKUP } from '../../data/seed';
+import { Puck } from '../../types';
 import placeholderImg from '../../assets/puck_placeholder.png';
 
 interface Props {
@@ -11,77 +11,24 @@ interface Props {
 
 const AddPuckCard: React.FC<Props> = ({ selectedShade }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1); // Two-step process like LastJobModal
-  const [qrInput, setQrInput] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [parsed, setParsed] = useState<{
-    shrinkageFactor: number;
-    serialNumber: number;
-    materialId: number;
-    lotNumber: number;
-    shade: string;
-    thickness: string;
-  } | null>(null);
+  const [selectedPuckForMove, setSelectedPuckForMove] = useState<Puck | null>(null);
   
-  const { pucks, setPucks } = usePuckContext();
+  const { pucks, moveFromInventoryToStorage } = usePuckContext();
   const { findFirstAvailableSlot, occupySlot } = useStorageContext();
 
-  const parseQr = (val: string) => {
-    const parts = val.split('|');
-    if (parts.length !== 4) {
-      setError('QR string must have 4 parts');
-      setParsed(null);
-      return;
-    }
-    const [sfStr, serialStr, materialStr, lotStr] = parts;
-    const shrinkageFactor = parseFloat(sfStr);
-    const serialNumber = parseInt(serialStr, 10);
-    const materialId = parseInt(materialStr, 10);
-    const lotNumber = parseInt(lotStr, 10);
+  // Get pucks from inventory that match the selected shade
+  const inventoryPucks = useMemo(() => {
+    if (!selectedShade) return [];
+    return pucks.filter(p => p.status === 'in_inventory' && p.shade === selectedShade);
+  }, [pucks, selectedShade]);
 
-    if (Number.isNaN(shrinkageFactor) || Number.isNaN(serialNumber) || Number.isNaN(materialId) || Number.isNaN(lotNumber)) {
-      setError('QR contains invalid numbers');
-      setParsed(null);
-      return;
-    }
-
-    const lookup = MATERIAL_LOOKUP.find((m) => m.materialId === materialId);
-    if (!lookup) {
-      setError('Material ID not found in lookup');
-      setParsed(null);
-      return;
-    }
-
-    if (selectedShade && lookup.shade !== selectedShade) {
-      setError(`Puck shade (${lookup.shade}) doesn't match selected shade (${selectedShade})`);
-      setParsed(null);
-      return;
-    }
-
-    setError(null);
-    setParsed({
-      shrinkageFactor,
-      serialNumber,
-      materialId,
-      lotNumber,
-      shade: lookup.shade,
-      thickness: lookup.thickness,
-    });
+  const handlePullFromInventory = (puck: Puck) => {
+    setSelectedPuckForMove(puck);
   };
 
-  const nextPuckId = useMemo(() => {
-    const nums = pucks
-      .map((p) => {
-        const match = p.puckId.match(/PUCK-(\d+)/);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter((n) => !Number.isNaN(n));
-    const max = nums.length > 0 ? Math.max(...nums) : 0;
-    return `PUCK-${(max + 1).toString().padStart(6, '0')}`;
-  }, [pucks]);
-
-  const handleAdd = () => {
-    if (!parsed) return;
+  const confirmPullFromInventory = () => {
+    if (!selectedPuckForMove) return;
     
     // Find available storage slot
     const vacant = findFirstAvailableSlot();
@@ -90,29 +37,13 @@ const AddPuckCard: React.FC<Props> = ({ selectedShade }) => {
       return;
     }
     
-    // Create the new puck
-    const newPuck = {
-      puckId: nextPuckId,
-      shrinkageFactor: parsed.shrinkageFactor,
-      serialNumber: parsed.serialNumber,
-      materialId: parsed.materialId,
-      lotNumber: parsed.lotNumber,
-      shade: parsed.shade,
-      thickness: parsed.thickness,
-      currentLocation: vacant.fullLocation,
-      screenshotUrl: '/puck_placeholder.png',
-      status: 'in_storage' as const,
-    };
-    
-    // Update contexts
-    setPucks([...pucks, newPuck]);
-    occupySlot(vacant.fullLocation, newPuck.puckId);
+    // Move puck from inventory to storage
+    moveFromInventoryToStorage(selectedPuckForMove.puckId, vacant.fullLocation);
+    occupySlot(vacant.fullLocation, selectedPuckForMove.puckId);
     
     // Close modal and show success with large text for the location
     setIsModalOpen(false);
-    setStep(1); // Reset step for next time
-    setQrInput(''); // Clear QR input
-    setParsed(null); // Clear parsed data
+    setSelectedPuckForMove(null);
     
     // Show placement confirmation with large text
     setShowPlacementConfirmation(true);
@@ -123,11 +54,8 @@ const AddPuckCard: React.FC<Props> = ({ selectedShade }) => {
   const [showPlacementConfirmation, setShowPlacementConfirmation] = useState(false);
   const [storageLocation, setStorageLocation] = useState('');
 
-  const isQrValid = !!parsed;
   const resetModal = () => {
-    setStep(1);
-    setQrInput('');
-    setParsed(null);
+    setSelectedPuckForMove(null);
     setError(null);
     setIsModalOpen(false);
   };
@@ -167,76 +95,70 @@ const AddPuckCard: React.FC<Props> = ({ selectedShade }) => {
         </div>
       </div>
 
-      {/* Modal for QR scanning process */}
+      {/* Modal for selecting pucks from inventory */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black opacity-50" onClick={resetModal} />
-          <div className="relative z-10 bg-[#1E1E1E] text-white rounded-lg p-6 w-[420px] space-y-5">
+          <div className="relative z-10 bg-[#1E1E1E] text-white rounded-lg p-6 w-[500px] space-y-5">
             <div>
-              <h3 className="text-lg font-semibold">Add New Puck</h3>
+              <h3 className="text-lg font-semibold">Pull Puck from Inventory</h3>
               {selectedShade && (
                 <p className="text-sm text-gray-300 mt-1">
-                  Adding puck shade: <span className="font-medium text-white">{selectedShade}</span>
+                  Available {selectedShade} pucks in inventory: <span className="font-medium text-white">{inventoryPucks.length}</span>
                 </p>
               )}
             </div>
             
-            {step === 1 && (
-              <div className="space-y-4 text-sm">
-                <p>Step 1: Scan Inventory QR Code to verify new puck pull.</p>
-                <button
-                  onClick={() => setStep(2)}
-                  className="w-full px-4 py-2 rounded bg-[#BB86FC] hover:brightness-110 text-sm font-medium"
-                >
-                  Simulate Scan (Continue)
-                </button>
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+            
+            {inventoryPucks.length === 0 ? (
+              <div className="bg-[#2D2D2D] rounded-md p-4 text-center">
+                <p className="text-gray-400">No {selectedShade} pucks available in inventory.</p>
+                <p className="text-xs mt-2">Check inventory or order new pucks.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {inventoryPucks.map(puck => (
+                  <div 
+                    key={puck.puckId}
+                    className={`bg-[#2D2D2D] rounded-md p-3 hover:bg-[#3D3D3D] cursor-pointer transition
+                      ${selectedPuckForMove?.puckId === puck.puckId ? 'ring-2 ring-[#BB86FC]' : ''}
+                    `}
+                    onClick={() => handlePullFromInventory(puck)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium">{puck.puckId}</p>
+                        <p className="text-xs text-gray-400">
+                          {puck.shade} | {puck.thickness} | SN: {puck.serialNumber}
+                        </p>
+                      </div>
+                      <div className="text-xs px-2 py-1 bg-[#1E1E1E] rounded">
+                        Lot: {puck.lotNumber}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
             
-            {step === 2 && (
-              <div className="space-y-4 text-sm">
-                <p>Step 2: Scan or enter the New Puck QR Code:</p>
-                <input
-                  type="text"
-                  value={qrInput}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setQrInput(val);
-                    parseQr(val);
-                  }}
-                  placeholder="e.g., 1.2331|48|128562|70796766"
-                  className="w-full px-3 py-2 rounded bg-[#2D2D2D] border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-[#BB86FC]"
-                />
-                {error && <p className="text-red-400 text-xs">{error}</p>}
-                {parsed && (
-                  <div className="border border-gray-600 rounded p-3 space-y-1 text-xs bg-[#2D2D2D]">
-                    <p><span className="font-semibold">Shade:</span> {parsed.shade}</p>
-                    <p><span className="font-semibold">Thickness:</span> {parsed.thickness}</p>
-                    <p><span className="font-semibold">Shrinkage:</span> {parsed.shrinkageFactor.toFixed(4)}</p>
-                    <p><span className="font-semibold">Lot:</span> {parsed.lotNumber}</p>
-                    <p><span className="font-semibold">Serial:</span> {parsed.serialNumber}</p>
-                    <p className="mt-2 text-green-400">Will be stored in first vacant slot upon confirmation.</p>
-                  </div>
-                )}
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    onClick={resetModal}
-                    className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={!isQrValid}
-                    onClick={handleAdd}
-                    className={`px-4 py-2 rounded text-sm font-medium transition min-w-[120px] bg-[#BB86FC] hover:brightness-110 ${
-                      !isQrValid ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    Add New Puck
-                  </button>
-                </div>
-              </div>
-            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={resetModal}
+                className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!selectedPuckForMove || inventoryPucks.length === 0}
+                onClick={confirmPullFromInventory}
+                className={`px-4 py-2 rounded text-sm font-medium transition min-w-[120px] bg-[#BB86FC] hover:brightness-110 ${
+                  !selectedPuckForMove || inventoryPucks.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                Pull to Storage
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -246,11 +168,11 @@ const AddPuckCard: React.FC<Props> = ({ selectedShade }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black opacity-50" onClick={() => setShowPlacementConfirmation(false)} />
           <div className="relative z-10 bg-[#1E1E1E] text-white rounded-lg p-6 w-[500px] space-y-6">
-            <h3 className="text-xl font-semibold">Puck Created Successfully</h3>
+            <h3 className="text-xl font-semibold">Puck Moved to Storage</h3>
             
             <div className="bg-gray-800 p-4 rounded-md">
               <div className="mb-2 text-sm">
-                Place new {parsed?.shade} {parsed?.thickness} puck in storage slot:
+                Pulled from Inventory. Place in storage slot:
               </div>
               <div className="text-4xl font-bold text-center p-6 bg-[#2D2D2D] rounded-md text-white border-2 border-[#BB86FC]">
                 {storageLocation}

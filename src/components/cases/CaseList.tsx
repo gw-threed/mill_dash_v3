@@ -53,8 +53,15 @@ const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
         .filter(c => c.shade === selectedShade)
         .map(c => c.caseId);
       
-      // Update the selection and the active selection shade
-      setSelectedIds(idsToSelect);
+      // Only auto-select all cases when changing shade or when no cases are currently selected
+      // This allows users to deselect individual cases while keeping the shade filter active
+      if (selectedIds.length === 0 || !selectedIds.every(id => {
+        const c = cases.find(c => c.caseId === id);
+        return c && c.shade === selectedShade;
+      })) {
+        setSelectedIds(idsToSelect);
+      }
+      
       setActiveSelectionShade(selectedShade);
     } else if (selectedShade === ALL_OTHER_SHADES) {
       // For Other Shades, just filter the view but don't auto-select
@@ -66,7 +73,7 @@ const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
       setSelectedIds([]);
       setActiveSelectionShade(null);
     }
-  }, [selectedShade, cases, setSelectedIds]);
+  }, [selectedShade, cases, setSelectedIds, selectedIds]);
 
   const toggleSelect = (id: string) => {
     const caseToToggle = cases.find(c => c.caseId === id);
@@ -77,9 +84,11 @@ const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
       if (prev.includes(id)) {
         const newSelection = prev.filter(i => i !== id);
         
-        // If no cases are selected anymore, reset the active selection shade
+        // Only reset activeSelectionShade if no cases are selected anymore
+        // But don't reset the selectedShade filter unless explicitly cleared by user
         if (newSelection.length === 0) {
           setActiveSelectionShade(null);
+          // We're not resetting selectedShade here, so the filter remains
         }
         
         return newSelection;
@@ -105,6 +114,27 @@ const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
   };
 
   const handleCaseClick = (caseData: CamCase) => {
+    // If we're in the "Other Shades" view, just handle case selection normally
+    if (selectedShade === ALL_OTHER_SHADES) {
+      toggleSelect(caseData.caseId);
+      return;
+    }
+    
+    // If we're not in "Other Shades" view, we want to filter by the clicked case's shade
+    // First, set the filter to this shade (or toggle it off if already selected)
+    if (selectedShade === caseData.shade) {
+      // If already filtered to this shade, clicking again should clear the filter
+      setSelectedShade(null);
+    } else {
+      // Set the filter to the clicked case's shade
+      setSelectedShade(caseData.shade);
+      
+      // No need to call toggleSelect here, as the useEffect hook will handle selection
+      // when selectedShade changes
+      return;
+    }
+    
+    // Only need to toggle selection if clearing the filter
     toggleSelect(caseData.caseId);
   };
 

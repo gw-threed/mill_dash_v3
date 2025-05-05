@@ -14,10 +14,23 @@ const CaseCard: React.FC<Props> = ({ caseData, isSelected, onToggle, onCaseClick
   // Determine if this case is selectable (either no active shade or matching shade)
   const isSelectable = !activeSelectionShade || activeSelectionShade === caseData.shade;
   
+  // Handler for clicking anywhere on the card
+  const handleCardClick = () => {
+    if (!isSelectable) return;
+    
+    if (isSelected) {
+      // If already selected, just toggle off selection when clicking anywhere
+      onToggle(caseData.caseId);
+    } else {
+      // If not selected, use onCaseClick which handles shade filtering
+      onCaseClick(caseData);
+    }
+  };
+  
   return (
     <div
       data-case-id={caseData.caseId}
-      onClick={() => isSelectable && onCaseClick(caseData)}
+      onClick={handleCardClick}
       className={clsx(
         'case-card relative bg-[#1E1E1E] text-white p-3 rounded-md flex flex-col shadow transition',
         isSelectable ? 'hover:-translate-y-0.5 hover:shadow-lg' : 'opacity-50 cursor-not-allowed',
@@ -40,7 +53,7 @@ const CaseCard: React.FC<Props> = ({ caseData, isSelected, onToggle, onCaseClick
           type="checkbox"
           checked={isSelected}
           disabled={!isSelectable}
-          onChange={() => isSelectable && onToggle(caseData.caseId)}
+          onChange={() => {}} // Handled by parent onClick
           className="sr-only"
         />
         <span
