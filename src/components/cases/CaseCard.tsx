@@ -1,47 +1,26 @@
 import React from 'react';
 import { CamCase } from '../../types';
 import clsx from 'clsx';
-import { ALL_OTHER_SHADES } from './ShadeTiles';
-import { useCaseContext } from '../../context/CaseContext';
 
 interface Props {
   caseData: CamCase;
   isSelected: boolean;
-  onToggle: (caseId: string) => void;
-  onCaseClick: (caseData: CamCase) => void;
+  isSelectable: boolean;
+  onToggle: () => void;
   activeSelectionShade: string | null;
 }
 
-const CaseCard: React.FC<Props> = ({ caseData, isSelected, onToggle, onCaseClick, activeSelectionShade }) => {
-  const { selectedShade } = useCaseContext();
-  
-  // Determine if this case is selectable:
-  // 1. In "Other Shades" view:
-  //    - If no active selection, all cases are selectable
-  //    - If there's an active selection shade, only matching cases are selectable
-  // 2. In regular shade view:
-  //    - Follow the activeSelectionShade rule
-  const isInOtherShadesView = selectedShade === ALL_OTHER_SHADES;
-  
-  let isSelectable = true;
-  if (isInOtherShadesView) {
-    // In "Other Shades" view - selectable if no activeSelectionShade or matches it
-    isSelectable = !activeSelectionShade || activeSelectionShade === caseData.shade;
-  } else {
-    // In regular shade view - selectable if it matches the selected shade
-    isSelectable = !activeSelectionShade || activeSelectionShade === caseData.shade;
-  }
-  
-  // Handler for clicking anywhere on the card
-  const handleCardClick = () => {
-    if (!isSelectable) return;
-    onCaseClick(caseData);
-  };
-  
+const CaseCard: React.FC<Props> = ({ 
+  caseData, 
+  isSelected, 
+  isSelectable,
+  onToggle, 
+  activeSelectionShade 
+}) => {
   return (
     <div
       data-case-id={caseData.caseId}
-      onClick={handleCardClick}
+      onClick={() => isSelectable && onToggle()}
       className={clsx(
         'case-card relative bg-[#1E1E1E] text-white p-3 rounded-md flex flex-col shadow transition',
         isSelectable ? 'hover:-translate-y-0.5 hover:shadow-lg cursor-pointer' : 'opacity-50 cursor-not-allowed',
@@ -56,7 +35,7 @@ const CaseCard: React.FC<Props> = ({ caseData, isSelected, onToggle, onCaseClick
         onClick={(e) => { 
           e.stopPropagation();
           if (isSelectable) {
-            onToggle(caseData.caseId);
+            onToggle();
           }
         }}
       >

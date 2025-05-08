@@ -38,7 +38,8 @@ const PuckList: React.FC<Props> = ({ selectedPuckId, setSelectedPuckId }) => {
   const filtered = useMemo(() => {
     // If we have a specific shade selected from active cases, use that
     if (activeSelectionShade) {
-      const eligible = pucks.filter((p) => p.status !== 'retired');
+      // Filter out retired and inventory pucks - only show storage and mill pucks
+      const eligible = pucks.filter((p) => p.status === 'in_storage' || p.status === 'in_mill');
       return eligible.filter((p) => p.shade === activeSelectionShade);
     }
     

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { Puck } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { generateSeedData } from '../data/seed';
@@ -23,6 +23,19 @@ const PuckContext = createContext<PuckContextValue | undefined>(undefined);
 export const PuckProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const seed = generateSeedData();
   const [pucks, setPucks] = useLocalStorage<Puck[]>('pucks', seed.pucks);
+
+  // Reset if localStorage has outdated data structure
+  useEffect(() => {
+    // Check if pucks have the required 'in_inventory' status type
+    const hasInventoryPucks = pucks.some(p => p.status === 'in_inventory');
+    
+    // If the inventory data structure has changed, reset to seed
+    if (!hasInventoryPucks) {
+      console.log("No inventory pucks found. Resetting to seed data.");
+      localStorage.removeItem('pucks');
+      setPucks(seed.pucks);
+    }
+  }, []);
 
   const movePuck = (puckId: string, newLocation: string) =>
     setPucks((prev) =>
@@ -102,7 +115,8 @@ export const PuckProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Get all pucks in inventory
   const getInventoryPucks = () => {
-    return pucks.filter(p => p.status === 'in_inventory');
+    const inventoryPucks = pucks.filter(p => p.status === 'in_inventory');
+    return inventoryPucks;
   };
 
   const value: PuckContextValue = {

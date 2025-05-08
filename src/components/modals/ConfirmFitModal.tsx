@@ -100,11 +100,9 @@ const ConfirmFitModal: React.FC<Props> = ({
 
   const nextStep = () => {
     if (currentStep === 1) {
-      if (occupiedInfo.occupiedPuckId && occupiedInfo.occupiedPuckId !== puckId) {
-        setShowRelocation(true);
-      } else {
-        setCurrentStep(2);
-      }
+      // Always show relocation modal after step 1, even if the target mill slot is empty
+      // This ensures the user gets instructions on where to get the puck and where to place it
+      setShowRelocation(true);
     } else {
       setCurrentStep((s) => Math.min(4, s + 1));
     }
@@ -132,6 +130,12 @@ const ConfirmFitModal: React.FC<Props> = ({
       }
       return next;
     });
+  };
+
+  const handleDone = () => {
+    // Ensure the modal closes completely
+    setShowSummary(false);
+    onClose();
   };
 
   const handleSubmit = async () => {
@@ -287,7 +291,7 @@ const ConfirmFitModal: React.FC<Props> = ({
           <div className="flex-1 bg-[#2D2D2D] rounded p-4 overflow-y-auto">
             <SubmissionSummary
               items={summaryItems}
-              onDone={onClose}
+              onDone={handleDone}
               title={
                 isReassignment 
                   ? 'Mill Reassignment Completed Successfully'
@@ -458,7 +462,7 @@ const ConfirmFitModal: React.FC<Props> = ({
           </div>
         )}
       </div>
-      {showRelocation && displacementNeeded && selectedMillId && (
+      {showRelocation && selectedMillId && (
         <RelocationModal
           selectedPuckId={puckId}
           selectedPuckLoc={isReassignment ? originalLocation : selectedPuckLoc}

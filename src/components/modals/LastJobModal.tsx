@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { usePuckContext } from '../../context/PuckContext';
 import { useStorageContext } from '../../context/StorageContext';
 import { Puck } from '../../types';
@@ -16,6 +16,9 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
 
   const [selectedPuck, setSelectedPuck] = useState<Puck | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanMessage, setScanMessage] = useState('');
+  const [listenForScan, setListenForScan] = useState(true);
   
   // State for placement confirmation
   const [showPlacementConfirmation, setShowPlacementConfirmation] = useState(false);
@@ -29,6 +32,44 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
       p.thickness === expectedThickness
     );
   }, [pucks, expectedShade, expectedThickness]);
+
+  // Set up keyboard listener for barcode scanner
+  useEffect(() => {
+    if (!listenForScan || inventoryPucks.length === 0) return;
+
+    // In a real implementation, this would be connected to a barcode scanner
+    // For demo purposes, we'll simulate a scan every 5 seconds
+    let scanTimer: number;
+    
+    const simulateScan = () => {
+      if (!listenForScan) return;
+      
+      // Only scan if we're not already scanning and have pucks to scan
+      if (!scanning && inventoryPucks.length > 0) {
+        processBarcodeScan();
+      }
+    };
+    
+    // Set up periodic scan simulation (in a real app this would be event-based)
+    scanTimer = setTimeout(simulateScan, 5000);
+    
+    // In a real implementation, you would listen for scanner input events here
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Many barcode scanners act as keyboard input devices
+      // You could detect specific patterns or prefixes here
+      // For demo purposes, we'll simulate a scan when Enter is pressed
+      if (event.key === 'Enter' && listenForScan) {
+        processBarcodeScan();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(scanTimer);
+    };
+  }, [listenForScan, inventoryPucks, scanning]);
 
   const handleSelectPuck = (puck: Puck) => {
     setSelectedPuck(puck);
@@ -53,6 +94,33 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
     setStorageLocation(vacant.fullLocation);
   };
 
+  // Process barcode scan
+  const processBarcodeScan = () => {
+    if (inventoryPucks.length === 0) {
+      setError('No matching pucks available in inventory to scan');
+      return;
+    }
+
+    setScanning(true);
+    setScanMessage('Processing barcode scan...');
+    
+    // Simulate barcode scanning - in a real implementation this would get the actual scanned barcode
+    setTimeout(() => {
+      setScanning(false);
+      
+      // Simulate finding a random matching puck from inventory
+      const randomIndex = Math.floor(Math.random() * inventoryPucks.length);
+      const scannedPuck = inventoryPucks[randomIndex];
+      
+      setSelectedPuck(scannedPuck);
+      setScanMessage(`Scanned puck: ${scannedPuck.puckId} (${scannedPuck.shade}, ${scannedPuck.thickness})`);
+      
+      // Temporarily stop listening to avoid multiple scans
+      setListenForScan(false);
+      setTimeout(() => setListenForScan(true), 2000);
+    }, 1000);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-50" onClick={onCancel} />
@@ -64,6 +132,25 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
           </p>
         </div>
         
+        {/* Scanner status indicator */}
+        {inventoryPucks.length > 0 && (
+          <div className={`flex items-center justify-center gap-3 py-2 px-4 rounded-md bg-[#2D2D2D] ${scanning ? 'animate-pulse' : ''}`}>
+            <div className={`w-3 h-3 rounded-full ${scanning ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+            <p className="text-sm">
+              {scanning 
+                ? 'Processing scan...' 
+                : 'Ready to scan barcode - scan a puck or select below'}
+            </p>
+          </div>
+        )}
+        
+        {/* Scan message */}
+        {scanMessage && (
+          <div className="px-4 py-2 bg-[#3A3A3A] rounded-md text-center border border-[#BB86FC]">
+            {scanMessage}
+          </div>
+        )}
+        
         {inventoryPucks.length === 0 ? (
           <div className="bg-[#2D2D2D] rounded-md p-4 text-center">
             <p className="text-red-400">No matching pucks available in inventory!</p>
@@ -71,12 +158,12 @@ const LastJobModal: React.FC<Props> = ({ onConfirm, onCancel, expectedShade, exp
               You need a {expectedShade} {expectedThickness} puck to replace the depleted one.
             </p>
             <div className="mt-4 flex justify-end">
-              <button
+            <button
                 onClick={onCancel}
                 className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
-              >
+            >
                 Cancel
-              </button>
+            </button>
             </div>
           </div>
         ) : (

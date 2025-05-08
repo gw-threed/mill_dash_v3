@@ -205,13 +205,13 @@ const DashboardLayout: React.FC = () => {
             
             {/* Inventory Management */}
             <div className="flex rounded-md overflow-hidden shadow-sm border border-borderMuted">
-              <button 
-                onClick={() => setShowUsedPuckQueue(true)}
+            <button 
+              onClick={() => setShowUsedPuckQueue(true)}
                 className="px-3 py-2 flex items-center gap-1.5 bg-surface hover:bg-surface-light text-sm transition-colors"
-              >
-                <OrderQueueIcon />
-                <span>Order Queue</span>
-              </button>
+            >
+              <OrderQueueIcon />
+              <span>Order Queue</span>
+            </button>
               <div className="w-px h-full bg-borderMuted"></div>
               <button 
                 onClick={() => setShowInventory(true)}

@@ -63,4 +63,5 @@ export interface DashboardData {
   pucks: Puck[];
   storageSlots: StorageSlot[];
   mills: Mill[];
+  millLogs: MillLogEntry[];
 } 

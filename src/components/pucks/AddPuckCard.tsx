@@ -142,23 +142,23 @@ const AddPuckCard: React.FC<Props> = ({ selectedShade }) => {
               </div>
             )}
             
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={resetModal}
-                className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
-              >
-                Cancel
-              </button>
-              <button
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={resetModal}
+                    className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
                 disabled={!selectedPuckForMove || inventoryPucks.length === 0}
                 onClick={confirmPullFromInventory}
-                className={`px-4 py-2 rounded text-sm font-medium transition min-w-[120px] bg-[#BB86FC] hover:brightness-110 ${
+                    className={`px-4 py-2 rounded text-sm font-medium transition min-w-[120px] bg-[#BB86FC] hover:brightness-110 ${
                   !selectedPuckForMove || inventoryPucks.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
+                    }`}
+                  >
                 Pull to Storage
-              </button>
-            </div>
+                  </button>
+                </div>
           </div>
         </div>
       )}

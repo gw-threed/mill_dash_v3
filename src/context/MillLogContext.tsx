@@ -1,10 +1,12 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 import { MillLogEntry } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { generateSeedData } from '../data/seed';
 
 interface MillLogContextValue {
   logs: MillLogEntry[];
-  addLogEntry: (entry: MillLogEntry) => void;
+  setLogs: (logs: MillLogEntry[]) => void;
+  addLogEntry: (log: MillLogEntry) => void;
   addRelocationLogEntry: (
     puckId: string,
     previousLocation: string,
@@ -16,41 +18,42 @@ interface MillLogContextValue {
 
 const MillLogContext = createContext<MillLogContextValue | undefined>(undefined);
 
-// Simple unique id generator for logs
-const generateLogId = () => `log-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-
 export const MillLogProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [logs, setLogs] = useLocalStorage<MillLogEntry[]>('millLogs', []);
+  const seed = generateSeedData();
+  const [logs, setLogs] = useLocalStorage<MillLogEntry[]>('millLogs', seed.millLogs);
 
-  const addLogEntry = (entry: MillLogEntry) => setLogs((prev) => [...prev, entry]);
-  
+  const addLogEntry = (log: MillLogEntry) => {
+    setLogs((prev) => [log, ...prev]);
+  };
+
   const addRelocationLogEntry = (
     puckId: string,
     previousLocation: string,
     newLocation: string,
     caseIds: string[],
-    notes = 'Mill reassignment'
+    notes?: string
   ) => {
-    const newEntry: MillLogEntry = {
-      logId: generateLogId(),
+    const logEntry: MillLogEntry = {
+      logId: `log-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
       timestamp: new Date().toISOString(),
       puckId,
       previousLocation,
       newLocation,
       caseIds,
-      lastJobTriggered: false,
       notes,
+      lastJobTriggered: false,
     };
     
-    setLogs((prev) => [...prev, newEntry]);
+    addLogEntry(logEntry);
   };
 
-  const value: MillLogContextValue = { 
-    logs, 
-    addLogEntry, 
-    addRelocationLogEntry 
+  const value: MillLogContextValue = {
+    logs,
+    setLogs,
+    addLogEntry,
+    addRelocationLogEntry,
   };
-  
+
   return <MillLogContext.Provider value={value}>{children}</MillLogContext.Provider>;
 };
 
