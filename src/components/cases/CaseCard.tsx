@@ -1,6 +1,8 @@
 import React from 'react';
 import { CamCase } from '../../types';
 import clsx from 'clsx';
+import { ALL_OTHER_SHADES } from './ShadeTiles';
+import { useCaseContext } from '../../context/CaseContext';
 
 interface Props {
   caseData: CamCase;
@@ -11,20 +13,29 @@ interface Props {
 }
 
 const CaseCard: React.FC<Props> = ({ caseData, isSelected, onToggle, onCaseClick, activeSelectionShade }) => {
-  // Determine if this case is selectable (either no active shade or matching shade)
-  const isSelectable = !activeSelectionShade || activeSelectionShade === caseData.shade;
+  const { selectedShade } = useCaseContext();
+  
+  // Determine if this case is selectable:
+  // 1. In "Other Shades" view:
+  //    - If no active selection, all cases are selectable
+  //    - If there's an active selection shade, only matching cases are selectable
+  // 2. In regular shade view:
+  //    - Follow the activeSelectionShade rule
+  const isInOtherShadesView = selectedShade === ALL_OTHER_SHADES;
+  
+  let isSelectable = true;
+  if (isInOtherShadesView) {
+    // In "Other Shades" view - selectable if no activeSelectionShade or matches it
+    isSelectable = !activeSelectionShade || activeSelectionShade === caseData.shade;
+  } else {
+    // In regular shade view - selectable if it matches the selected shade
+    isSelectable = !activeSelectionShade || activeSelectionShade === caseData.shade;
+  }
   
   // Handler for clicking anywhere on the card
   const handleCardClick = () => {
     if (!isSelectable) return;
-    
-    if (isSelected) {
-      // If already selected, just toggle off selection when clicking anywhere
-      onToggle(caseData.caseId);
-    } else {
-      // If not selected, use onCaseClick which handles shade filtering
-      onCaseClick(caseData);
-    }
+    onCaseClick(caseData);
   };
   
   return (
@@ -33,7 +44,7 @@ const CaseCard: React.FC<Props> = ({ caseData, isSelected, onToggle, onCaseClick
       onClick={handleCardClick}
       className={clsx(
         'case-card relative bg-[#1E1E1E] text-white p-3 rounded-md flex flex-col shadow transition',
-        isSelectable ? 'hover:-translate-y-0.5 hover:shadow-lg' : 'opacity-50 cursor-not-allowed',
+        isSelectable ? 'hover:-translate-y-0.5 hover:shadow-lg cursor-pointer' : 'opacity-50 cursor-not-allowed',
         isSelected ? 'selected ring-2 ring-cyan-400/70 shadow-[0_0_10px_#22D3EE]' : 'ring-0',
       )}
     >

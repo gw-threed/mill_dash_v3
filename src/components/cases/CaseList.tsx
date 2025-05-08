@@ -64,10 +64,16 @@ const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
       
       setActiveSelectionShade(selectedShade);
     } else if (selectedShade === ALL_OTHER_SHADES) {
-      // For Other Shades, just filter the view but don't auto-select
-      // Reset selections when switching to Other Shades
-      setSelectedIds([]);
-      setActiveSelectionShade(null);
+      // For Other Shades, don't reset selections automatically
+      // Just ensure activeSelectionShade is consistent with any existing selections
+      if (selectedIds.length > 0) {
+        const firstCase = cases.find(c => c.caseId === selectedIds[0]);
+        if (firstCase) {
+          setActiveSelectionShade(firstCase.shade);
+        }
+      } else {
+        setActiveSelectionShade(null);
+      }
     } else if (!selectedShade) {
       // When no shade is selected, clear the selection
       setSelectedIds([]);
@@ -79,6 +85,31 @@ const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
     const caseToToggle = cases.find(c => c.caseId === id);
     if (!caseToToggle) return;
     
+    // Special handling for Other Shades view - allow selecting any case
+    if (selectedShade === ALL_OTHER_SHADES) {
+      setSelectedIds(prev => {
+        if (prev.includes(id)) {
+          return prev.filter(i => i !== id);
+        } else {
+          // In Other Shades view, we still need to track the shade for the current selection
+          if (prev.length === 0) {
+            setActiveSelectionShade(caseToToggle.shade);
+          } else {
+            // Check if the new case's shade matches existing selections
+            const firstCase = cases.find(c => c.caseId === prev[0]);
+            if (firstCase && firstCase.shade !== caseToToggle.shade) {
+              // Cannot mix shades
+              console.log(`Cannot select cases with different shades. Active: ${firstCase.shade}, Attempted: ${caseToToggle.shade}`);
+              return prev;
+            }
+          }
+          return [...prev, id];
+        }
+      });
+      return;
+    }
+    
+    // Regular shade selection logic (not Other Shades)
     setSelectedIds(prev => {
       // If this case is already selected, just remove it
       if (prev.includes(id)) {
@@ -114,9 +145,32 @@ const CaseList: React.FC<Props> = ({ selectedIds, setSelectedIds }) => {
   };
 
   const handleCaseClick = (caseData: CamCase) => {
-    // If we're in the "Other Shades" view, just handle case selection normally
+    // If we're in the "Other Shades" view, just toggle selection directly
     if (selectedShade === ALL_OTHER_SHADES) {
-      toggleSelect(caseData.caseId);
+      if (selectedIds.includes(caseData.caseId)) {
+        // Already selected - deselect it
+        setSelectedIds(prev => prev.filter(id => id !== caseData.caseId));
+        
+        // Reset activeSelectionShade if no cases left
+        if (selectedIds.length <= 1) {
+          setActiveSelectionShade(null);
+        }
+      } else {
+        // Not selected - check for shade compatibility
+        if (selectedIds.length === 0) {
+          // First selection - set the shade
+          setActiveSelectionShade(caseData.shade);
+          setSelectedIds([caseData.caseId]);
+        } else {
+          // Verify same shade as existing selections
+          const firstCase = cases.find(c => c.caseId === selectedIds[0]);
+          if (firstCase && firstCase.shade === caseData.shade) {
+            setSelectedIds(prev => [...prev, caseData.caseId]);
+          } else {
+            console.log(`Cannot select cases with different shades`);
+          }
+        }
+      }
       return;
     }
     
