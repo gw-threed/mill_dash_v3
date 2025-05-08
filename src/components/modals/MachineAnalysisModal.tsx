@@ -26,6 +26,8 @@ const MachineAnalysisModal: React.FC<Props> = ({ onClose }) => {
   const { cases } = useCaseContext();
   const [analysisView, setAnalysisView] = useState<AnalysisView>('overall');
   
+  console.log("Raw logs:", logs);
+  
   // Calculate machine statistics
   const machineStats = useMemo(() => {
     // Initialize stats for each mill
@@ -44,32 +46,32 @@ const MachineAnalysisModal: React.FC<Props> = ({ onClose }) => {
     // Process logs to calculate metrics
     logs.forEach(log => {
       // If this is a log entry where a puck was moved to a mill
-      if (log.newLocation.includes('mill') && !log.lastJobTriggered) {
-        const millId = log.newLocation.split('-')[0]; // Extract mill ID from location
+      if (log.newLocation && log.newLocation.includes('/')) {
+        const millId = log.newLocation.split('/')[0]; // Extract mill ID from location
         
         if (stats[millId]) {
-          // Increment puck count
-          stats[millId].pucksUsed++;
+          // Increment puck count only if not a lastJobTriggered (replacement)
+          if (!log.lastJobTriggered) {
+            stats[millId].pucksUsed++;
+          }
           
           // Count units and cases
           if (log.caseIds && log.caseIds.length > 0) {
-            // Find cases for this log entry
-            const relatedCases = cases.filter(c => log.caseIds.includes(c.caseId));
-            
-            // Count units
-            relatedCases.forEach(c => {
-              stats[millId].unitsMilled += c.units;
-            });
+            // Count number of units based on log caseIds
+            const unitsCount = log.caseIds.length;
+            stats[millId].unitsMilled += unitsCount;
             
             // Count unique cases
-            stats[millId].casesCompleted += relatedCases.length;
+            stats[millId].casesCompleted += log.caseIds.length;
             
-            // Check for material type if available in caseIds
-            relatedCases.forEach(c => {
-              // Use shade as the material identifier
-              const materialKey = c.shade;
-              stats[millId].materialCounts[materialKey] = 
-                (stats[millId].materialCounts[materialKey] || 0) + 1;
+            // Try to find shade info from cases if available
+            log.caseIds.forEach(caseId => {
+              const caseItem = cases.find(c => c.caseId === caseId);
+              if (caseItem) {
+                const materialKey = caseItem.shade;
+                stats[millId].materialCounts[materialKey] = 
+                  (stats[millId].materialCounts[materialKey] || 0) + 1;
+              }
             });
           }
         }
