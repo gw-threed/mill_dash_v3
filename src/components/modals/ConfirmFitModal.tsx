@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ConfirmFitProgressBar from './ConfirmFitProgressBar';
 import MillSlotSelector from './MillSlotSelector';
 import RelocationModal from './RelocationModal';
@@ -48,22 +48,56 @@ const ConfirmFitModal: React.FC<Props> = ({
 
   // Keep track of stl files the user skipped (did NOT fit)
   const [skippedStls, setSkippedStls] = useState<Set<string>>(new Set());
+  
+  // For reassignment, we need to create mock STL files for display
+  const [reassignmentStlFiles, setReassignmentStlFiles] = useState<Record<string, string[]>>({});
 
   const { mills, occupyMillSlot, clearMillSlot } = useMillContext();
   const { movePuck, updatePuckScreenshot, pucks, setPucks, updatePuckStatus, retirePuck } = usePuckContext();
   const { removeCases, addCases, cases, removeStlFromCase } = useCaseContext();
   const { findFirstAvailableSlot, clearSlot, occupySlot } = useStorageContext();
-  const { addLogEntry, addRelocationLogEntry } = useMillLogContext();
+  const { addLogEntry, addRelocationLogEntry, logs } = useMillLogContext();
 
   const selectedPuck = pucks.find((p) => p.puckId === puckId);
   const selectedPuckLoc = selectedPuck?.currentLocation || '';
 
+  // Generate STL files for reassignment cases
+  useEffect(() => {
+    if (isReassignment && caseIds.length > 0) {
+      // Find cases that match our caseIds
+      const matchingCases = cases.filter(c => caseIds.includes(c.caseId));
+      
+      // For each case ID, create entries in our reassignmentStlFiles object
+      const stlMap: Record<string, string[]> = {};
+      
+      caseIds.forEach(caseId => {
+        // Try to find the case in the current cases
+        const foundCase = matchingCases.find(c => c.caseId === caseId);
+        
+        if (foundCase && foundCase.stlFiles.length > 0) {
+          // If we find the case with STL files, use those
+          stlMap[caseId] = foundCase.stlFiles;
+        } else {
+          // Otherwise, generate mock STL files based on the case ID
+          // Generate a random number of STL files (between 1 and 3)
+          const numFiles = Math.floor(Math.random() * 3) + 1;
+          const mockFiles = Array(numFiles).fill(0).map((_, idx) => 
+            `${caseId}|restoration|${idx + 1}|crown.stl`
+          );
+          stlMap[caseId] = mockFiles;
+        }
+      });
+      
+      setReassignmentStlFiles(stlMap);
+    }
+  }, [isReassignment, caseIds, cases]);
+
   // For reassignment, initialize with the existing puck's screenshot
   useEffect(() => {
-    if (isReassignment && selectedPuck?.screenshotUrl) {
+    if (isReassignment && selectedPuck?.screenshotUrl && !screenshot) {
       setScreenshot(selectedPuck.screenshotUrl);
     }
-  }, [isReassignment, selectedPuck]);
+  }, [isReassignment, selectedPuck, screenshot]);
 
   const occupiedInfo = (() => {
     if (!selectedMillId || !selectedSlot) return { occupiedPuckId: undefined, occupiedShade: undefined };
@@ -137,6 +171,25 @@ const ConfirmFitModal: React.FC<Props> = ({
     setShowSummary(false);
     onClose();
   };
+  
+  // For displaying case STL files, we need a consolidated mapping
+  const caseToStlMap = useMemo(() => {
+    const result: Record<string, string[]> = {};
+    
+    if (isReassignment) {
+      // For reassignment, use our generated/found STL files
+      return reassignmentStlFiles;
+    } else {
+      // For normal operation, use the actual case data
+      caseIds.forEach(caseId => {
+        const c = cases.find(c => c.caseId === caseId);
+        if (c) {
+          result[caseId] = c.stlFiles;
+        }
+      });
+      return result;
+    }
+  }, [cases, caseIds, isReassignment, reassignmentStlFiles]);
 
   const handleSubmit = async () => {
     if (!selectedMillId || !selectedSlot || !screenshot) return;
@@ -309,13 +362,21 @@ const ConfirmFitModal: React.FC<Props> = ({
               <h4 className="font-semibold mb-2">Selected Cases ({caseIds.length})</h4>
               <div className="space-y-3 text-xs opacity-80">
                 {caseIds.map((id) => {
-                  const c = cases.find((cc) => cc.caseId === id);
-                  if (!c) return null;
+                  // Use the STL mapping we created above
+                  const stlFiles = caseToStlMap[id] || [];
+                  
+                  if (stlFiles.length === 0) return (
+                    <div key={id}>
+                      <p className="text-sm font-semibold mb-1">{id}</p>
+                      <p className="text-xs text-gray-400 italic">No STL files available</p>
+                    </div>
+                  );
+                  
                   return (
                     <div key={id}>
                       <p className="text-sm font-semibold mb-1">{id}</p>
                       <ul className="space-y-1">
-                        {c.stlFiles.filter((f)=>!skippedStls.has(f)).map((f) => (
+                        {stlFiles.filter((f)=>!skippedStls.has(f)).map((f) => (
                           <li key={f} className="flex justify-between items-center bg-surface-light px-2 py-1 rounded">
                             <span className="truncate">{f}</span>
                             {!isReassignment && (
@@ -393,7 +454,7 @@ const ConfirmFitModal: React.FC<Props> = ({
                     originalLocation={originalLocation}
                   />
                 )}
-                {currentStep !== 1 && currentStep !== 4 && (
+                {currentStep !== 1 && currentStep !== 4 && currentStep !== 2 && currentStep !== 3 && (
                   <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                     Step {currentStep} content placeholder
                   </div>

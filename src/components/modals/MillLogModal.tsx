@@ -11,6 +11,8 @@ interface Props {
   onClose: () => void;
 }
 
+const ITEMS_PER_PAGE = 20;
+
 const MillLogModal: React.FC<Props> = ({ onClose }) => {
   const { logs } = useMillLogContext();
   const { mills } = useMillContext();
@@ -20,6 +22,7 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
   const [query, setQuery] = useState('');
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState<MillLogEntry | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Helper to check if a date is today
   const isToday = (dateString: string) => {
@@ -31,20 +34,38 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
   };
 
   const filtered: MillLogEntry[] = useMemo(() => {
-    if (!query.trim()) return logs.slice().reverse(); // newest first
-    const q = query.toLowerCase();
-    return logs
-      .filter((log) => {
-        return (
-          log.puckId.toLowerCase().includes(q) ||
-          log.caseIds.some((cid) => cid.toLowerCase().includes(q)) ||
-          (log.technicianName && log.technicianName.toLowerCase().includes(q)) ||
-          log.newPuckId?.toLowerCase().includes(q)
-        );
-      })
-      .slice()
-      .reverse();
+    // Get filtered logs based on query
+    let result = !query.trim() 
+      ? [...logs] 
+      : logs.filter((log) => {
+          const q = query.toLowerCase();
+          return (
+            log.puckId.toLowerCase().includes(q) ||
+            log.caseIds.some((cid) => cid.toLowerCase().includes(q)) ||
+            (log.technicianName && log.technicianName.toLowerCase().includes(q)) ||
+            log.newPuckId?.toLowerCase().includes(q)
+          );
+        });
+    
+    // Sort by timestamp (newest first)
+    return result.sort((a, b) => {
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
   }, [logs, query]);
+
+  // Calculate pagination info
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  
+  // Ensure currentPage is in valid range when filtered results change
+  if (currentPage > totalPages) {
+    setCurrentPage(totalPages);
+  }
+  
+  // Get current page items
+  const currentItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filtered, currentPage]);
 
   const handleReassignClick = (log: MillLogEntry) => {
     setSelectedLog(log);
@@ -60,6 +81,12 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
     const newCases = generateAdditionalCases();
     addCases(newCases);
     alert(`Added ${newCases.length} new mock cases`);
+  };
+  
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   return (
@@ -103,7 +130,7 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((log) => {
+              {currentItems.map((log) => {
                 const isTodaysJob = isToday(log.timestamp);
 
                 return (
@@ -141,6 +168,48 @@ const MillLogModal: React.FC<Props> = ({ onClose }) => {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-between items-center mt-4 border-t border-gray-700 pt-4">
+            <div className="text-sm text-gray-400">
+              Showing {Math.min(filtered.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} to {Math.min(filtered.length, currentPage * ITEMS_PER_PAGE)} of {filtered.length} entries
+            </div>
+            <div className="flex gap-1">
+              <button
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+                className="px-2 py-1 rounded text-xs bg-[#2D2D2D] hover:bg-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                First
+              </button>
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-2 py-1 rounded text-xs bg-[#2D2D2D] hover:bg-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <span className="px-2 py-1 text-xs bg-[#3D3D3D] rounded">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 rounded text-xs bg-[#2D2D2D] hover:bg-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 rounded text-xs bg-[#2D2D2D] hover:bg-[#3D3D3D] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Confirm Fit Modal for reassignment */}
