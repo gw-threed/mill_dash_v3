@@ -14,6 +14,18 @@ import { generateSeedData } from '../../data/seed';
 import { useStorageContext } from '../../context/StorageContext';
 import { useMillLogContext } from '../../context/MillLogContext';
 
+// Generate a batch number in the format of A1, where A is the bin (A-X) and 1 is the slot (1-6)
+const generateBatchNumber = () => {
+  // Bins are A through X (24 bins)
+  const bins = 'ABCDEFGHIJKLMNOPQRSTUVWX';
+  const bin = bins[Math.floor(Math.random() * bins.length)];
+  
+  // Slots are 1 through 6
+  const slot = Math.floor(Math.random() * 6) + 1;
+  
+  return `${bin}${slot}`;
+};
+
 interface Props {
   caseIds: string[];
   puckId: string;
@@ -51,6 +63,9 @@ const ConfirmFitModal: React.FC<Props> = ({
   
   // For reassignment, we need to create mock STL files for display
   const [reassignmentStlFiles, setReassignmentStlFiles] = useState<Record<string, string[]>>({});
+
+  // Store batch numbers for STL files to ensure consistency
+  const [batchNumbers, setBatchNumbers] = useState<Record<string, string>>({});
 
   const { mills, occupyMillSlot, clearMillSlot } = useMillContext();
   const { movePuck, updatePuckScreenshot, pucks, setPucks, updatePuckStatus, retirePuck } = usePuckContext();
@@ -190,6 +205,22 @@ const ConfirmFitModal: React.FC<Props> = ({
       return result;
     }
   }, [cases, caseIds, isReassignment, reassignmentStlFiles]);
+
+  // Initialize batch numbers for all STL files
+  useEffect(() => {
+    const newBatchNumbers: Record<string, string> = {};
+    
+    // Create batch numbers for all STL files across all cases
+    Object.values(caseToStlMap).forEach(stlFiles => {
+      stlFiles.forEach(stlFile => {
+        if (!newBatchNumbers[stlFile]) {
+          newBatchNumbers[stlFile] = generateBatchNumber();
+        }
+      });
+    });
+    
+    setBatchNumbers(newBatchNumbers);
+  }, [caseToStlMap]);
 
   const handleSubmit = async () => {
     if (!selectedMillId || !selectedSlot || !screenshot) return;
@@ -378,11 +409,16 @@ const ConfirmFitModal: React.FC<Props> = ({
                       <ul className="space-y-1">
                         {stlFiles.filter((f)=>!skippedStls.has(f)).map((f) => (
                           <li key={f} className="flex justify-between items-center bg-surface-light px-2 py-1 rounded">
-                            <span className="truncate">{f}</span>
+                            <div className="flex-1 truncate">
+                              <span className="truncate">{f}</span>
+                              <span className="ml-2 px-1.5 py-0.5 bg-primary/20 text-primary-light rounded text-xs font-medium">
+                                Batch: {batchNumbers[f] || 'A1'}
+                              </span>
+                            </div>
                             {!isReassignment && (
                               <button
                                 onClick={() => toggleSkipStl(f)}
-                                className={`text-textSecondary transition ${
+                                className={`text-textSecondary transition ml-2 flex-shrink-0 ${
                                   skippedStls.has(f) ? 'text-green-400' : 'hover:text-primary'
                                 } ${gcodeConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 disabled={gcodeConfirmed}
